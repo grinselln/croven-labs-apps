@@ -12,7 +12,8 @@ if (session_status() === PHP_SESSION_NONE) {
 
 if (empty($_SESSION['auth_user_id'])) {
     $redirect = urlencode($_SERVER['REQUEST_URI'] ?? '');
-    header('Location: login.php' . ($redirect ? '?redirect=' . $redirect : ''));
+    $base = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'];
+    header('Location: ' . $base . '/login.php' . ($redirect ? '?redirect=' . $redirect : ''));
     exit;
 }
 
