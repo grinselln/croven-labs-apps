@@ -10,7 +10,7 @@
 
 
 
-require_once $db_hosted;
+require_once 'db/db_hosted.php';
 // -------------------------------------------------------
 // Configuration — replace these with your actual values
 // -------------------------------------------------------
