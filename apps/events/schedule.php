@@ -37,6 +37,7 @@ foreach ($rows as $row) {
             'venue_City'      => $row['venue_City'],
             'venue_State'     => $row['venue_State'],
             'memory_path'     => $row['memory_path'] ?? null,
+            'festival_ID'     => $row['festival_ID'] ?? null,
             'performers'      => [],
         ];
     }
@@ -849,38 +850,73 @@ $usersJson     = json_encode(array_values($allUsers),      JSON_HEX_TAG);
 .em-dd li .dd-sub { font-size: 0.72rem; opacity: 0.5; margin-top: 1px; }
 .em-dd li.dd-new  { opacity: 0.55; font-style: italic; }
 
-/* Performers inside modal */
-.em-p-header {
-  display: grid;
-  grid-template-columns: 1fr 52px auto auto 1fr auto;
-  gap: 6px;
-  padding: 0 10px 4px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  opacity: 0.4;
-}
-.em-p-header span { text-align: center; }
-.em-p-header span:first-child { text-align: left; }
-@media (max-width: 480px) { .em-p-header { display: none; } }
-
+/* Performers inside modal — two-line card layout */
 .em-p-list { display: flex; flex-direction: column; gap: 6px; }
 
 .em-p-row {
-  display: grid;
-  grid-template-columns: 1fr 52px auto auto 1fr auto;
-  gap: 6px;
-  align-items: start;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 9px;
   padding: 8px 10px;
+  padding-right: 42px; /* room for × */
   animation: fadeIn 0.18s ease;
 }
-@media (max-width: 480px) {
-  .em-p-row { grid-template-columns: 1fr 40px auto auto 1fr auto; gap: 4px; }
+
+/* Line 1: name + order */
+.em-p-row-top {
+  display: flex;
+  gap: 6px;
+  align-items: center;
 }
+.em-p-row-top .em-p-name-wrap { flex: 1; }
+.em-p-row-top .em-p-order { width: 48px; flex-shrink: 0; }
+
+/* Line 2: toggle buttons */
+.em-p-row-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+
+/* Headliner / Opener toggle buttons */
+.em-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid var(--border-strong);
+  background: var(--input-bg);
+  color: var(--muted);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+  line-height: 1;
+}
+.em-toggle-btn:hover { border-color: var(--accent); color: var(--text); }
+.em-toggle-btn input[type="checkbox"] { display: none; }
+
+.em-toggle-btn.is-headliner.active {
+  background: var(--headliner-bg);
+  border-color: var(--headliner-text);
+  color: var(--headliner-text);
+}
+.em-toggle-btn.is-opener.active {
+  background: var(--highlight);
+  border-color: #9a6000;
+  color: #9a6000;
+}
+body.dark .em-toggle-btn.is-opener.active { color: #f0a500; border-color: #f0a500; }
+body.red  .em-toggle-btn.is-headliner.active { background: rgba(255,43,43,0.15); border-color: #ff2b2b; color: #ff2b2b; }
+body.red  .em-toggle-btn.is-opener.active    { background: rgba(255,43,43,0.10); border-color: rgba(255,43,43,0.6); color: rgba(255,43,43,0.8); }
 
 .em-p-name-wrap { position: relative; width: 100%; }
 .em-p-name-input {
@@ -911,56 +947,28 @@ $usersJson     = json_encode(array_values($allUsers),      JSON_HEX_TAG);
   text-align: center;
 }
 
-/* Toggle badges */
-.em-toggle {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  cursor: pointer;
-  user-select: none;
-}
-.em-toggle input[type="checkbox"] { display: none; }
-.em-toggle-label {
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  opacity: 0.4;
-}
-.em-toggle-box {
-  width: 30px;
-  height: 24px;
-  border-radius: 6px;
+/* × remove button — top-right of card */
+.em-p-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
   border: 1px solid var(--border-strong);
-  background: var(--input-bg);
+  color: var(--muted);
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8rem;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
 }
-.em-toggle.is-headliner input:checked ~ .em-toggle-box {
-  background: var(--headliner-bg);
-  border-color: var(--headliner-text);
-}
-.em-toggle.is-opener input:checked ~ .em-toggle-box {
-  background: var(--highlight);
-  border-color: #9a6000;
-}
-
-/* ── Watched-by user chip selector (edit modal) ─────────────────────── */
-.em-watched-by {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-.em-watched-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
+.em-p-remove:hover { background: #fff0f0; border-color: #c0392b; color: #c0392b; }
+body.dark .em-p-remove:hover { background: #2a1010; border-color: #ff6b6b; color: #ff6b6b; }
+body.red  .em-p-remove:hover { background: #2a0000; border-color: #ff4d4d; color: #ff4d4d; }
 .em-user-chip {
   display: inline-flex;
   align-items: center;
@@ -992,24 +1000,7 @@ body.red .em-user-chip.active {
   color: #ff2b2b;
 }
 
-.em-p-remove {
-  background: none;
-  border: 1px solid var(--border-strong);
-  color: var(--muted);
-  width: 26px;
-  height: 26px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-  flex-shrink: 0;
-}
-.em-p-remove:hover { background: #fff0f0; border-color: #c0392b; color: #c0392b; }
-body.dark .em-p-remove:hover { background: #2a1010; border-color: #ff6b6b; color: #ff6b6b; }
-body.red  .em-p-remove:hover { background: #2a0000; border-color: #ff4d4d; color: #ff4d4d; }
+
 
 .em-add-performer-btn {
   width: 100%;
@@ -1076,6 +1067,121 @@ body.red  .em-p-remove:hover { background: #2a0000; border-color: #ff4d4d; color
 body.red .em-btn-save { background: #ff2b2b; }
 .em-btn-save:hover    { opacity: 0.88; }
 .em-btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Festival checkbox ───────────────────────────────────────────── */
+.em-festival-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 4px;
+}
+.em-festival-wrap input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--card-bg);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+  position: relative;
+}
+.em-festival-wrap input[type="checkbox"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.em-festival-wrap input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3px; top: 0px;
+  width: 5px; height: 9px;
+  border: 2px solid #fff;
+  border-top: none; border-left: none;
+  transform: rotate(45deg);
+}
+body.red .em-festival-wrap input[type="checkbox"]:checked {
+  background: #ff2b2b;
+  border-color: #ff2b2b;
+}
+.em-festival-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* ── Festival uncheck confirmation dialog ────────────────────────── */
+.fest-confirm-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 1200;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.fest-confirm-overlay.open { display: flex; }
+.fest-confirm-dialog {
+  background: var(--card-bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  width: min(400px, 92vw);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+.fest-confirm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.fest-confirm-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.fest-confirm-body {
+  padding: 18px 20px;
+  font-size: 0.875rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.fest-confirm-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+}
+.fest-confirm-no {
+  background: none;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.65;
+  transition: opacity 0.15s;
+}
+.fest-confirm-no:hover { opacity: 1; }
+.fest-confirm-yes {
+  background: #c0392b;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  transition: opacity 0.15s;
+}
+body.red .fest-confirm-yes { background: #ff2b2b; }
+.fest-confirm-yes:hover { opacity: 0.88; }
 </style>
 
 <!-- ── Favorites Modal ──────────────────────────────────────────────── -->
@@ -1145,6 +1251,10 @@ body.red .em-btn-save { background: #ff2b2b; }
       <!-- Event section -->
       <div class="em-section">
         <div class="em-section-title">Event</div>
+        <div class="em-festival-wrap">
+          <input type="checkbox" id="emIsFestival">
+          <label class="em-festival-label" for="emIsFestival">Festival?</label>
+        </div>
         <div class="em-grid-2">
           <div class="em-field em-full">
             <label class="em-label">Event Name <span class="req">*</span></label>
@@ -1192,14 +1302,6 @@ body.red .em-btn-save { background: #ff2b2b; }
       <!-- Performers section -->
       <div class="em-section">
         <div class="em-section-title">Performers</div>
-        <div class="em-p-header">
-          <span>Name</span>
-          <span>Order</span>
-          <span>Head</span>
-          <span>Open</span>
-          <span style="text-align:left">Watched By</span>
-          <span></span>
-        </div>
         <div class="em-p-list" id="emPerformerList"></div>
         <button type="button" class="em-add-performer-btn" id="emAddPerformerBtn">+ Add Performer</button>
       </div>
@@ -1272,6 +1374,22 @@ body.red .fav-submit { background: #ff2b2b; color: #fff; }
 body.dark .fav-select option { background: #1e1e1e; }
 body.red  .fav-select option { background: #141414; color: #ff2b2b; }
 </style>
+
+<!-- ── Festival uncheck confirmation dialog ──────────────────────── -->
+<div class="fest-confirm-overlay" id="festConfirmOverlay">
+  <div class="fest-confirm-dialog">
+    <div class="fest-confirm-header">
+      <span class="fest-confirm-title">Remove Festival?</span>
+    </div>
+    <div class="fest-confirm-body">
+      This will clear the Festival ID from this event. Are you sure you want to proceed?
+    </div>
+    <div class="fest-confirm-footer">
+      <button class="fest-confirm-no"  id="festConfirmNo">No, keep it</button>
+      <button class="fest-confirm-yes" id="festConfirmYes">Yes, remove</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const allEvents    = <?= $eventsJson ?>;
@@ -1602,6 +1720,8 @@ function openEditModal(eventId) {
   document.getElementById('emEventName').value = ev.event_Name  || '';
   document.getElementById('emStartDate').value  = ev.event_StartDate || '';
   document.getElementById('emEndDate').value    = ev.event_EndDate   || '';
+  document.getElementById('emIsFestival').checked = !!(ev.festival_ID);
+  festivalWasChecked = !!(ev.festival_ID);
 
   // Populate venue fields
   document.getElementById('emVenueName').value    = ev.venue_Name  || '';
@@ -1661,35 +1781,46 @@ function addEmPerformerRow(opts = {}) {
 
   // Build user chips
   const preSelected = opts.watched_user_ids || [];
-  const chipsHtml = USERS_LIST.map(u =>
+  const userBtnsHtml = USERS_LIST.map(u =>
     `<button type="button" class="em-user-chip${preSelected.includes(u.id) ? ' active' : ''}" data-user-id="${u.id}">${escHtml(u.name)}</button>`
   ).join('');
 
   row.innerHTML = `
-    <div class="em-p-name-wrap">
-      <input type="text" class="em-p-name-input" placeholder="Performer name"
-             value="${escHtml(opts.name || '')}" autocomplete="off">
-      <ul class="em-dd em-p-dd" role="listbox"></ul>
-    </div>
-    <input type="number" class="em-p-order" placeholder="#" min="1"
-           value="${opts.order !== undefined ? opts.order : list.children.length + 1}">
-    <label class="em-toggle is-headliner" title="Headliner">
-      <input type="checkbox" class="em-p-head" ${opts.is_headliner ? 'checked' : ''}>
-      <span class="em-toggle-label">Head</span>
-      <span class="em-toggle-box">🎤</span>
-    </label>
-    <label class="em-toggle is-opener" title="Opener">
-      <input type="checkbox" class="em-p-opener" ${opts.is_opener ? 'checked' : ''}>
-      <span class="em-toggle-label">Open</span>
-      <span class="em-toggle-box">🎸</span>
-    </label>
-    <div class="em-watched-by">
-      <div class="em-watched-chips">${chipsHtml}</div>
-    </div>
     <button type="button" class="em-p-remove" title="Remove">×</button>
+
+    <div class="em-p-row-top">
+      <div class="em-p-name-wrap">
+        <input type="text" class="em-p-name-input" placeholder="Performer name"
+               value="${escHtml(opts.name || '')}" autocomplete="off">
+        <ul class="em-dd em-p-dd" role="listbox"></ul>
+      </div>
+      <input type="number" class="em-p-order" placeholder="#" min="1"
+             value="${opts.order !== undefined ? opts.order : list.children.length + 1}">
+    </div>
+
+    <div class="em-p-row-btns">
+      <button type="button" class="em-toggle-btn is-headliner${opts.is_headliner ? ' active' : ''}" title="Headliner">
+        <input type="checkbox" class="em-p-head" ${opts.is_headliner ? 'checked' : ''}>
+        🎤 Headliner
+      </button>
+      <button type="button" class="em-toggle-btn is-opener${opts.is_opener ? ' active' : ''}" title="Opener">
+        <input type="checkbox" class="em-p-opener" ${opts.is_opener ? 'checked' : ''}>
+        🎸 Opener
+      </button>
+      ${userBtnsHtml}
+    </div>
   `;
 
-  // Toggle chips on click
+  // Toggle Headliner / Opener buttons
+  row.querySelectorAll('.em-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.classList.toggle('active');
+      const cb = btn.querySelector('input[type="checkbox"]');
+      if (cb) cb.checked = btn.classList.contains('active');
+    });
+  });
+
+  // Toggle user chips on click
   row.querySelectorAll('.em-user-chip').forEach(chip => {
     chip.addEventListener('click', () => chip.classList.toggle('active'));
   });
@@ -1787,6 +1918,28 @@ function attachEmPerformerCombobox(input, dd) {
   input.addEventListener('blur',  () => setTimeout(() => dd.classList.remove('open'), 150));
 })();
 
+// ── Festival uncheck confirmation ────────────────────────────────
+let festivalWasChecked = false; // tracks state when modal opened
+
+// Intercept unchecking a previously-festival event
+document.getElementById('emIsFestival').addEventListener('change', function () {
+  if (!this.checked && festivalWasChecked) {
+    // They're unchecking — ask for confirmation
+    this.checked = true; // revert optimistically
+    document.getElementById('festConfirmOverlay').classList.add('open');
+  }
+});
+
+document.getElementById('festConfirmNo').addEventListener('click', () => {
+  document.getElementById('festConfirmOverlay').classList.remove('open');
+  // Leave checkbox as-is (still checked)
+});
+
+document.getElementById('festConfirmYes').addEventListener('click', () => {
+  document.getElementById('festConfirmOverlay').classList.remove('open');
+  document.getElementById('emIsFestival').checked = false;
+});
+
 // ── Save edit ─────────────────────────────────────────────────────
 document.getElementById('emBtnSave').addEventListener('click', async () => {
   const eventName  = document.getElementById('emEventName').value.trim();
@@ -1835,6 +1988,11 @@ document.getElementById('emBtnSave').addEventListener('click', async () => {
         venue_city:     venueCity,
         venue_state:    venueState,
         venue_type:     document.getElementById('emVenueType').value.trim(),
+        is_festival:    document.getElementById('emIsFestival').checked ? 1 : 0,
+        old_festival_id: (() => {
+          const ev = allEvents.find(e => e.event_ID === editingEventId);
+          return (ev && ev.festival_ID) ? ev.festival_ID : null;
+        })(),
         performers,
         removed_ep_ids: removedEpIds,
       })
@@ -1853,6 +2011,10 @@ document.getElementById('emBtnSave').addEventListener('click', async () => {
         allEvents[evIdx].venue_Name      = venueName;
         allEvents[evIdx].venue_City      = venueCity;
         allEvents[evIdx].venue_State     = venueState;
+        // Sync festival_ID from response
+        if (data.festival_ID !== undefined) {
+          allEvents[evIdx].festival_ID = data.festival_ID;
+        }
         // Use fresh performers from API (includes new record_IDs)
         if (data.performers) {
           allEvents[evIdx].performers = data.performers.map(p => ({
@@ -2314,6 +2476,10 @@ function escHtml(s) {
 }
 </script>
 
-<?php require 'memories_db_modal.php'; ?>
+<?php 
+require 'b2_browser_modal.php';   // ← add this
+require 'memories_db_modal.php';
+?>
+
 </body>
 </html>

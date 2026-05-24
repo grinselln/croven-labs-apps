@@ -166,20 +166,18 @@ try {
     }
     .field input::placeholder { color: var(--border-strong); }
     body.red .field input::placeholder,
-    body.red .p-row input::placeholder { color: rgba(255,43,43,0.45); }
+    body.red .p-row .p-order-input::placeholder { color: rgba(255,43,43,0.45); }
 
     body.red .field label,
     body.red .field label .req,
     body.red .form-card-title,
     body.red .page-heading,
-    body.red .p-header span,
-    body.red .p-toggle-label            { color: #ff2b2b; }
+    body.red .p-header span { color: #ff2b2b; }
 
     body.red .field input[type="text"],
     body.red .field input[type="date"],
     body.red .field input[type="number"],
-    body.red .p-row input[type="text"],
-    body.red .p-row input[type="number"] { color: #ff2b2b; }
+    body.red .p-row .p-order-input { color: #ff2b2b; }
 
     body.red .btn-add-performer          { color: #ff2b2b; }
     body.red .btn-add-performer:hover    { color: #ff2b2b; border-color: #ff2b2b; }
@@ -191,83 +189,82 @@ try {
       gap: 8px;
     }
 
-    /* ── Performer row: name | order | head | open | watched-by | × ── */
+    /* ── Performer card: two-line layout ── */
     .p-row {
-      display: grid;
-      grid-template-columns: 1fr 56px auto auto 1fr auto;
+      position: relative;
+      display: flex;
+      flex-direction: column;
       gap: 8px;
-      align-items: start;
       background: var(--input-bg);
       border: 0.5px solid var(--border);
       border-radius: 10px;
       padding: 10px 12px;
+      padding-right: 44px; /* room for the × button */
       animation: fadeIn 0.2s ease;
     }
-    @media (max-width: 480px) {
-      .p-row { grid-template-columns: 1fr 44px auto auto 1fr auto; gap: 5px; }
-    }
 
-    .p-row input[type="text"],
-    .p-row input[type="number"] {
-      padding: 7px 9px;
-      border: 0.5px solid var(--border-strong);
-      border-radius: 7px;
-      font-size: 13px;
-      background: var(--card-bg);
-      color: var(--text);
-      font-family: inherit;
-      outline: none;
-      width: 100%;
-      transition: border-color 0.15s;
-    }
-    .p-row input:focus { border-color: var(--accent); }
-
-    .p-toggle {
+    /* Line 1: name + order */
+    .p-row-top {
       display: flex;
-      flex-direction: column;
+      gap: 8px;
       align-items: center;
-      gap: 3px;
-      cursor: pointer;
-      user-select: none;
     }
-    .p-toggle input[type="checkbox"] { display: none; }
+    .p-row-top .p-name-wrap { flex: 1; }
+    .p-row-top .p-order-input { width: 52px; flex-shrink: 0; }
 
-    .p-toggle-label {
-      font-size: 9px;
+    /* Line 2: toggle buttons */
+    .p-row-btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    /* Headliner / Opener toggle buttons */
+    .p-toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
       font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-
-    .p-toggle-box {
-      width: 32px;
-      height: 26px;
-      border-radius: 6px;
+      font-family: inherit;
+      cursor: pointer;
       border: 0.5px solid var(--border-strong);
       background: var(--card-bg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      transition: background 0.15s, border-color 0.15s;
+      color: var(--muted);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+      line-height: 1;
     }
+    .p-toggle-btn:hover { border-color: var(--accent); color: var(--text); }
+    .p-toggle-btn input[type="checkbox"] { display: none; }
 
-    .p-toggle.is-headliner input:checked ~ .p-toggle-box {
+    .p-toggle-btn.is-headliner.active {
       background: var(--headliner-bg);
       border-color: var(--headliner-text);
+      color: var(--headliner-text);
     }
-    .p-toggle.is-opener input:checked ~ .p-toggle-box {
+    .p-toggle-btn.is-opener.active {
       background: var(--highlight);
       border-color: #9a6000;
+      color: #9a6000;
     }
+    body.dark .p-toggle-btn.is-opener.active { color: #f0a500; border-color: #f0a500; }
+    body.red  .p-toggle-btn.is-headliner.active { background: rgba(255,43,43,0.15); border-color: #ff2b2b; color: #ff2b2b; }
+    body.red  .p-toggle-btn.is-opener.active    { background: rgba(255,43,43,0.10); border-color: rgba(255,43,43,0.6); color: rgba(255,43,43,0.8); }
 
+    /* × remove button — top-right of card */
     .p-remove {
+      position: absolute;
+      top: 10px;
+      right: 10px;
       background: none;
       border: 0.5px solid var(--border-strong);
       color: var(--muted);
-      width: 28px;
-      height: 28px;
+      width: 26px;
+      height: 26px;
       border-radius: 6px;
       cursor: pointer;
       font-size: 15px;
@@ -281,33 +278,25 @@ try {
     body.dark .p-remove:hover  { background: #2a1010; border-color: #ff6b6b; color: #ff6b6b; }
     body.red  .p-remove:hover  { background: #2a0000; border-color: #ff4d4d; color: #ff4d4d; }
 
-    .p-header {
-      display: grid;
-      grid-template-columns: 1fr 56px auto auto 1fr auto;
-      gap: 8px;
-      padding: 0 12px 2px;
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.07em;
-      text-transform: uppercase;
-      color: var(--muted);
+    .p-row .p-order-input {
+      padding: 7px 9px;
+      border: 0.5px solid var(--border-strong);
+      border-radius: 7px;
+      font-size: 13px;
+      background: var(--card-bg);
+      color: var(--text);
+      font-family: inherit;
+      outline: none;
+      width: 52px;
+      transition: border-color 0.15s;
     }
-    .p-header span { text-align: center; }
-    .p-header span:first-child  { text-align: left; }
-    .p-header span:nth-child(5) { text-align: left; }
-    @media (max-width: 480px) { .p-header { display: none; } }
+    .p-row .p-order-input:focus { border-color: var(--accent); }
 
-    /* ── Watched-by chip selector ────────────────────────────────── */
-    .p-watched-by {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .p-watched-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-    }
+
+
+
+
+
     .p-user-chip {
       display: inline-flex;
       align-items: center;
@@ -414,6 +403,52 @@ try {
     body.red .venue-dd li       { color: #ff2b2b; }
     body.red .venue-dd li .dd-sub { color: rgba(255,43,43,0.55); }
 
+    /* ── Festival checkbox ───────────────────────────────────────── */
+    .festival-check-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 2px;
+    }
+    .festival-check-wrap input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border: 1.5px solid var(--border-strong);
+      border-radius: 4px;
+      background: var(--input-bg);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s;
+      position: relative;
+    }
+    .festival-check-wrap input[type="checkbox"]:checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .festival-check-wrap input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      left: 3px; top: 0px;
+      width: 5px; height: 9px;
+      border: 2px solid #fff;
+      border-top: none; border-left: none;
+      transform: rotate(45deg);
+    }
+    body.red .festival-check-wrap input[type="checkbox"]:checked {
+      background: #ff2b2b;
+      border-color: #ff2b2b;
+    }
+    .festival-check-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+      user-select: none;
+    }
+    body.red .festival-check-label { color: #ff2b2b; }
+
     .p-name-wrap { width: 100%; }
     .p-name-wrap .p-name-input {
       width: 100%;
@@ -456,6 +491,10 @@ try {
   <!-- ── 1. Event ──────────────────────────────────────────────── -->
   <div class="form-card">
     <div class="form-card-title">Event</div>
+    <div class="festival-check-wrap">
+      <input type="checkbox" id="isFestival">
+      <label class="festival-check-label" for="isFestival">Festival?</label>
+    </div>
     <div class="field-grid-2">
       <div class="field field-full">
         <label>Event Name <span class="req">*</span></label>
@@ -503,14 +542,6 @@ try {
   <!-- ── 3. Performers ─────────────────────────────────────────── -->
   <div class="form-card">
     <div class="form-card-title">Performers</div>
-    <div class="p-header">
-      <span>Name</span>
-      <span>Order</span>
-      <span>Head</span>
-      <span>Open</span>
-      <span>Watched By</span>
-      <span></span>
-    </div>
     <div id="performersList"></div>
     <button type="button" class="btn-add-performer" id="addPerformerBtn">+ Add Performer</button>
   </div>
@@ -543,35 +574,46 @@ function addPerformerRow(opts = {}) {
 
   // Build user chips HTML
   const preSelected = opts.watched_user_ids || [];
-  const chipsHtml = USERS_LIST.map(u =>
+  const userBtnsHtml = USERS_LIST.map(u =>
     `<button type="button" class="p-user-chip${preSelected.includes(u.id) ? ' active' : ''}" data-user-id="${u.id}">${esc(u.name)}</button>`
   ).join('');
 
   row.innerHTML = `
-    <div class="p-name-wrap" style="position:relative">
-      <input type="text" class="p-name-input" placeholder="Performer name"
-             value="${esc(opts.name || '')}" autocomplete="off">
-      <ul class="venue-dd p-dd" role="listbox"></ul>
-    </div>
-    <input type="number" class="p-order-input" placeholder="#" min="1"
-           value="${opts.order !== undefined ? opts.order : list.children.length + 1}">
-    <label class="p-toggle is-headliner" title="Headliner">
-      <input type="checkbox" class="p-head-cb" ${opts.is_headliner ? 'checked' : ''}>
-      <span class="p-toggle-label">Head</span>
-      <span class="p-toggle-box">🎤</span>
-    </label>
-    <label class="p-toggle is-opener" title="Main Opener">
-      <input type="checkbox" class="p-opener-cb" ${opts.is_opener ? 'checked' : ''}>
-      <span class="p-toggle-label">Open</span>
-      <span class="p-toggle-box">🎸</span>
-    </label>
-    <div class="p-watched-by">
-      <div class="p-watched-chips">${chipsHtml}</div>
-    </div>
     <button type="button" class="p-remove" title="Remove">×</button>
+
+    <div class="p-row-top">
+      <div class="p-name-wrap" style="position:relative">
+        <input type="text" class="p-name-input" placeholder="Performer name"
+               value="${esc(opts.name || '')}" autocomplete="off">
+        <ul class="venue-dd p-dd" role="listbox"></ul>
+      </div>
+      <input type="number" class="p-order-input" placeholder="#" min="1"
+             value="${opts.order !== undefined ? opts.order : list.children.length + 1}">
+    </div>
+
+    <div class="p-row-btns">
+      <button type="button" class="p-toggle-btn is-headliner${opts.is_headliner ? ' active' : ''}" title="Headliner">
+        <input type="checkbox" class="p-head-cb" ${opts.is_headliner ? 'checked' : ''}>
+        🎤 Headliner
+      </button>
+      <button type="button" class="p-toggle-btn is-opener${opts.is_opener ? ' active' : ''}" title="Main Opener">
+        <input type="checkbox" class="p-opener-cb" ${opts.is_opener ? 'checked' : ''}>
+        🎸 Opener
+      </button>
+      ${userBtnsHtml}
+    </div>
   `;
 
-  // Toggle chips on click
+  // Toggle Headliner / Opener buttons
+  row.querySelectorAll('.p-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.classList.toggle('active');
+      const cb = btn.querySelector('input[type="checkbox"]');
+      if (cb) cb.checked = btn.classList.contains('active');
+    });
+  });
+
+  // Toggle user chips on click
   row.querySelectorAll('.p-user-chip').forEach(chip => {
     chip.addEventListener('click', () => chip.classList.toggle('active'));
   });
@@ -716,6 +758,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
         venue_city:    venueCity,
         venue_state:   venueState,
         venue_type:    document.getElementById('venueType').value.trim(),
+        is_festival:   document.getElementById('isFestival').checked ? 1 : 0,
         performers,
       })
     });
@@ -732,6 +775,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
       document.getElementById('venueCity').value   = '';
       document.getElementById('venueState').value  = '';
       document.getElementById('venueType').value   = '';
+      document.getElementById('isFestival').checked = false;
       document.getElementById('performersList').innerHTML = '';
       rowCount = 0;
       addPerformerRow();
