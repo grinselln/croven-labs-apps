@@ -14,6 +14,5 @@ if (ini_get('session.use_cookies')) {
 }
 session_destroy();
 
-$base = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'];
-header('Location: ' . $base . '/login.php');
+header('Location: /login.php');
 exit;
