@@ -51,7 +51,10 @@
           </div>
           <div class="mdb-image-url-wrap">
             <label class="mdb-label">Image URL</label>
-            <input class="mdb-input mdb-image-url-input mdb-editable" id="mdbFImageUrl" type="text" readonly placeholder="No image URL">
+            <div class="mdb-image-url-row">
+              <input class="mdb-input mdb-image-url-input mdb-editable" id="mdbFImageUrl" type="text" readonly placeholder="No image URL">
+              <button class="mdb-browse-btn" id="mdbBrowseBtn" type="button" style="display:none" title="Browse media library">&#128247; Browse</button>
+            </div>
           </div>
         </div>
 
@@ -434,6 +437,11 @@
   gap: 5px;
   background: rgba(255,255,255,0.02);
 }
+.mdb-image-url-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
 .mdb-image-url-input {
   font-size: 0.75rem;
   font-family: monospace;
@@ -442,8 +450,25 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 .mdb-image-url-input:focus { opacity: 0.9; }
+.mdb-browse-btn {
+  flex-shrink: 0;
+  background: rgba(167,139,250,0.1);
+  border: 1px solid rgba(167,139,250,0.35);
+  border-radius: 7px;
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #a78bfa;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+  line-height: 1;
+}
+.mdb-browse-btn:hover { background: rgba(167,139,250,0.22); border-color: rgba(167,139,250,0.6); }
 
 /* ── Read-only mode ───────────────────────────────────────────────── */
 .mdb-detail-form.readonly .mdb-editable {
@@ -537,6 +562,7 @@
   var fTradeDay  = document.getElementById('mdbFTradeDay');
   var fStory     = document.getElementById('mdbFStory');
   var fImageUrl  = document.getElementById('mdbFImageUrl');
+  var browseBtn  = document.getElementById('mdbBrowseBtn');
 
 
   /* ── State ── */
@@ -661,20 +687,40 @@
         if (el.tagName === 'SELECT') el.disabled = false;
         else el.removeAttribute('readonly');
       });
+      // Image URL input lives outside detailForm — handle it separately
+      fImageUrl.removeAttribute('readonly');
       editBtn.style.display  = 'none';
       saveBtn.style.display  = 'inline-block';
+      browseBtn.style.display = 'inline-block';
     } else {
       detailForm.classList.add('readonly');
       editables.forEach(function (el) {
         if (el.tagName === 'SELECT') el.disabled = true;
         else el.setAttribute('readonly', true);
       });
+      // Image URL input lives outside detailForm — handle it separately
+      fImageUrl.setAttribute('readonly', true);
       editBtn.style.display  = 'inline-block';
       saveBtn.style.display  = 'none';
+      browseBtn.style.display = 'none';
     }
   }
 
   editBtn.addEventListener('click', function () { setEditMode(true); });
+
+  browseBtn.addEventListener('click', function () {
+    if (typeof window.openB2Browser !== 'function') {
+      alert('B2 browser not available. Make sure b2_browser_modal.php is included on this page.');
+      return;
+    }
+    window.openB2Browser(currentEventId, function (url) {
+      fImageUrl.value = url;
+      // Update the live preview immediately
+      detailImg.src = url;
+      detailImg.style.display   = 'block';
+      placeholder.style.display = 'none';
+    });
+  });
 
   /* ── Open blank form to create a new memory ── */
   function openNewMemory() {
@@ -812,6 +858,10 @@
                 detailImg.src = mem.image_path;
                 detailImg.style.display   = 'block';
                 placeholder.style.display = 'none';
+              } else {
+                detailImg.src             = '';
+                detailImg.style.display   = 'none';
+                placeholder.style.display = 'flex';
               }
             }
           }

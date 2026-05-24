@@ -2476,7 +2476,10 @@ function escHtml(s) {
 }
 </script>
 
-<?php require 'memories_db_modal.php'; ?>
+<?php 
+require 'b2_browser_modal.php';   // ← add this
+require 'memories_db_modal.php';
+?>
 
 </body>
 </html>

@@ -53,7 +53,7 @@ function uploadToB2(string $fileTmpPath, string $fileName, string $mimeType, int
 
     // --- Build storage key (path inside bucket) ---
     $safeFileName = preg_replace('/[^a-zA-Z0-9._-]/', '_', basename($fileName));
-    $folder       = 'concerts/' . $concertId . '/' . date('Y-m');
+    $folder = 'concerts/' . $concertId . '/memories';
     $key          = $folder . '/' . uniqid() . '_' . $safeFileName;
 
     // --- Read file ---
