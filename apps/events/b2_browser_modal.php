@@ -782,6 +782,7 @@
             grid.style.display        = 'none';
             browseEmpty.style.display = 'flex';
           }
+          lbDeleteBtn.disabled = false;
           closeLightbox();
         } else {
           alert('Delete failed: ' + (data.error || 'Unknown error'));
@@ -927,22 +928,6 @@
       fd.append('action',   'upload');
       fd.append('event_id', currentEventId);
       fd.append('file',     item.file, item.file.name);
-
-      // ── Debug: confirm full upload path before sending ────────────────────
-      var debugPath = B2_BUCKET_NAME + '/concerts/' + currentEventId + '/memories/' + item.file.name;
-      var debugMsg  = 'Upload destination:\n\n'
-                    + '  Bucket : ' + B2_BUCKET_NAME + '\n'
-                    + '  Path   : concerts/' + currentEventId + '/memories/\n'
-                    + '  File   : ' + item.file.name + '\n\n'
-                    + 'Full path:\n  ' + debugPath;
-      if (!confirm(debugMsg)) {
-        item.status               = 'error';
-        item._statusEl.className  = 'b2b-queue-status error';
-        item._statusEl.textContent = 'Cancelled';
-        resolve();
-        return;
-      }
-      // ── End debug ─────────────────────────────────────────────────
 
       var xhr = new XMLHttpRequest();
 
