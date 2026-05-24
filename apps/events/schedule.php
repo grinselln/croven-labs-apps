@@ -37,6 +37,7 @@ foreach ($rows as $row) {
             'venue_City'      => $row['venue_City'],
             'venue_State'     => $row['venue_State'],
             'memory_path'     => $row['memory_path'] ?? null,
+            'festival_ID'     => $row['festival_ID'] ?? null,
             'performers'      => [],
         ];
     }
@@ -1066,6 +1067,121 @@ body.red .em-user-chip.active {
 body.red .em-btn-save { background: #ff2b2b; }
 .em-btn-save:hover    { opacity: 0.88; }
 .em-btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Festival checkbox ───────────────────────────────────────────── */
+.em-festival-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 4px;
+}
+.em-festival-wrap input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--card-bg);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+  position: relative;
+}
+.em-festival-wrap input[type="checkbox"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.em-festival-wrap input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3px; top: 0px;
+  width: 5px; height: 9px;
+  border: 2px solid #fff;
+  border-top: none; border-left: none;
+  transform: rotate(45deg);
+}
+body.red .em-festival-wrap input[type="checkbox"]:checked {
+  background: #ff2b2b;
+  border-color: #ff2b2b;
+}
+.em-festival-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* ── Festival uncheck confirmation dialog ────────────────────────── */
+.fest-confirm-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 1200;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.fest-confirm-overlay.open { display: flex; }
+.fest-confirm-dialog {
+  background: var(--card-bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  width: min(400px, 92vw);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+.fest-confirm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.fest-confirm-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.fest-confirm-body {
+  padding: 18px 20px;
+  font-size: 0.875rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.fest-confirm-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+}
+.fest-confirm-no {
+  background: none;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.65;
+  transition: opacity 0.15s;
+}
+.fest-confirm-no:hover { opacity: 1; }
+.fest-confirm-yes {
+  background: #c0392b;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  transition: opacity 0.15s;
+}
+body.red .fest-confirm-yes { background: #ff2b2b; }
+.fest-confirm-yes:hover { opacity: 0.88; }
 </style>
 
 <!-- ── Favorites Modal ──────────────────────────────────────────────── -->
@@ -1135,6 +1251,10 @@ body.red .em-btn-save { background: #ff2b2b; }
       <!-- Event section -->
       <div class="em-section">
         <div class="em-section-title">Event</div>
+        <div class="em-festival-wrap">
+          <input type="checkbox" id="emIsFestival">
+          <label class="em-festival-label" for="emIsFestival">Festival?</label>
+        </div>
         <div class="em-grid-2">
           <div class="em-field em-full">
             <label class="em-label">Event Name <span class="req">*</span></label>
@@ -1254,6 +1374,22 @@ body.red .fav-submit { background: #ff2b2b; color: #fff; }
 body.dark .fav-select option { background: #1e1e1e; }
 body.red  .fav-select option { background: #141414; color: #ff2b2b; }
 </style>
+
+<!-- ── Festival uncheck confirmation dialog ──────────────────────── -->
+<div class="fest-confirm-overlay" id="festConfirmOverlay">
+  <div class="fest-confirm-dialog">
+    <div class="fest-confirm-header">
+      <span class="fest-confirm-title">Remove Festival?</span>
+    </div>
+    <div class="fest-confirm-body">
+      This will clear the Festival ID from this event. Are you sure you want to proceed?
+    </div>
+    <div class="fest-confirm-footer">
+      <button class="fest-confirm-no"  id="festConfirmNo">No, keep it</button>
+      <button class="fest-confirm-yes" id="festConfirmYes">Yes, remove</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const allEvents    = <?= $eventsJson ?>;
@@ -1584,6 +1720,8 @@ function openEditModal(eventId) {
   document.getElementById('emEventName').value = ev.event_Name  || '';
   document.getElementById('emStartDate').value  = ev.event_StartDate || '';
   document.getElementById('emEndDate').value    = ev.event_EndDate   || '';
+  document.getElementById('emIsFestival').checked = !!(ev.festival_ID);
+  festivalWasChecked = !!(ev.festival_ID);
 
   // Populate venue fields
   document.getElementById('emVenueName').value    = ev.venue_Name  || '';
@@ -1780,6 +1918,28 @@ function attachEmPerformerCombobox(input, dd) {
   input.addEventListener('blur',  () => setTimeout(() => dd.classList.remove('open'), 150));
 })();
 
+// ── Festival uncheck confirmation ────────────────────────────────
+let festivalWasChecked = false; // tracks state when modal opened
+
+// Intercept unchecking a previously-festival event
+document.getElementById('emIsFestival').addEventListener('change', function () {
+  if (!this.checked && festivalWasChecked) {
+    // They're unchecking — ask for confirmation
+    this.checked = true; // revert optimistically
+    document.getElementById('festConfirmOverlay').classList.add('open');
+  }
+});
+
+document.getElementById('festConfirmNo').addEventListener('click', () => {
+  document.getElementById('festConfirmOverlay').classList.remove('open');
+  // Leave checkbox as-is (still checked)
+});
+
+document.getElementById('festConfirmYes').addEventListener('click', () => {
+  document.getElementById('festConfirmOverlay').classList.remove('open');
+  document.getElementById('emIsFestival').checked = false;
+});
+
 // ── Save edit ─────────────────────────────────────────────────────
 document.getElementById('emBtnSave').addEventListener('click', async () => {
   const eventName  = document.getElementById('emEventName').value.trim();
@@ -1828,6 +1988,11 @@ document.getElementById('emBtnSave').addEventListener('click', async () => {
         venue_city:     venueCity,
         venue_state:    venueState,
         venue_type:     document.getElementById('emVenueType').value.trim(),
+        is_festival:    document.getElementById('emIsFestival').checked ? 1 : 0,
+        old_festival_id: (() => {
+          const ev = allEvents.find(e => e.event_ID === editingEventId);
+          return (ev && ev.festival_ID) ? ev.festival_ID : null;
+        })(),
         performers,
         removed_ep_ids: removedEpIds,
       })
@@ -1846,6 +2011,10 @@ document.getElementById('emBtnSave').addEventListener('click', async () => {
         allEvents[evIdx].venue_Name      = venueName;
         allEvents[evIdx].venue_City      = venueCity;
         allEvents[evIdx].venue_State     = venueState;
+        // Sync festival_ID from response
+        if (data.festival_ID !== undefined) {
+          allEvents[evIdx].festival_ID = data.festival_ID;
+        }
         // Use fresh performers from API (includes new record_IDs)
         if (data.performers) {
           allEvents[evIdx].performers = data.performers.map(p => ({
@@ -2308,5 +2477,6 @@ function escHtml(s) {
 </script>
 
 <?php require 'memories_db_modal.php'; ?>
+
 </body>
 </html>

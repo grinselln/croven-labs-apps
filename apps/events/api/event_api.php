@@ -95,6 +95,7 @@ if ($action === 'insert') {
     $venueState   = trim($req['venue_state']   ?? '');
     $venueType    = trim($req['venue_type']    ?? '');
     $performers   = $req['performers']         ?? [];
+    $isFestival   = !empty($req['is_festival']) ? 1 : 0;
 
     if (!$eventName || !$startDate || !$venueName || !$venueCity || !$venueState) {
         http_response_code(422);
@@ -167,6 +168,20 @@ if ($action === 'insert') {
             exit;
         }
 
+        // ── Set festival_ID if flagged ────────────────────────────
+        if ($isFestival) {
+            $maxStmt = $pdo->prepare("SELECT COALESCE(MAX(festival_ID), 0) + 1 FROM event");
+            $maxStmt->execute();
+            $nextFid = (int)$maxStmt->fetchColumn();
+            $maxStmt->closeCursor();
+            // Update the event row(s) just created (same name + start date)
+            $pdo->prepare("
+                UPDATE event
+                SET festival_ID = ?
+                WHERE event_Name = ? AND event_StartDate = ?
+            ")->execute([$nextFid, $eventName, $startDate]);
+        }
+
         echo json_encode(['success' => true, 'added' => $addedCount]);
 
     } catch (PDOException $e) {
@@ -191,6 +206,8 @@ if ($action === 'update') {
     $venueType    = trim($req['venue_type']    ?? '');
     $performers   = $req['performers']         ?? [];   // array of performer objects
     $removedIds   = $req['removed_ep_ids']     ?? [];   // event_performer IDs to delete
+    $isFestival   = !empty($req['is_festival']) ? 1 : 0;
+    $oldFestivalId = isset($req['old_festival_id']) ? (int)$req['old_festival_id'] : 0;
 
     if ($eventId <= 0) {
         http_response_code(422);
@@ -222,7 +239,25 @@ if ($action === 'update') {
         ");
         $evStmt->execute([$eventName, $startDate, $endDate, $year, $venueId, $eventId]);
 
-        // ── 3. Remove deleted performers (also clean up watched rows) ─
+        // ── 2b. Handle festival_ID ────────────────────────────────────
+        $newFestivalId = null;
+        if ($isFestival && !$oldFestivalId) {
+            // Newly marked as festival — assign next available festival_ID
+            $maxStmt = $pdo->prepare("SELECT COALESCE(MAX(festival_ID), 0) + 1 FROM event");
+            $maxStmt->execute();
+            $newFestivalId = (int)$maxStmt->fetchColumn();
+            $maxStmt->closeCursor();
+            $pdo->prepare("UPDATE event SET festival_ID = ? WHERE event_ID = ?")
+                ->execute([$newFestivalId, $eventId]);
+        } elseif (!$isFestival && $oldFestivalId) {
+            // Unmark festival — clear festival_ID
+            $pdo->prepare("UPDATE event SET festival_ID = NULL WHERE event_ID = ?")
+                ->execute([$eventId]);
+            $newFestivalId = null;
+        } else {
+            // No change — keep whatever it was
+            $newFestivalId = $oldFestivalId ?: null;
+        }
         foreach ($removedIds as $epId) {
             $epId = (int)$epId;
             if ($epId <= 0) continue;
@@ -289,7 +324,7 @@ if ($action === 'update') {
         }
         unset($fp);
 
-        echo json_encode(['success' => true, 'performers' => $freshPerformers]);
+        echo json_encode(['success' => true, 'performers' => $freshPerformers, 'festival_ID' => $newFestivalId]);
 
     } catch (PDOException $e) {
         $pdo->rollBack();

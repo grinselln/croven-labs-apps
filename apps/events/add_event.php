@@ -403,6 +403,52 @@ try {
     body.red .venue-dd li       { color: #ff2b2b; }
     body.red .venue-dd li .dd-sub { color: rgba(255,43,43,0.55); }
 
+    /* ── Festival checkbox ───────────────────────────────────────── */
+    .festival-check-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 2px;
+    }
+    .festival-check-wrap input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border: 1.5px solid var(--border-strong);
+      border-radius: 4px;
+      background: var(--input-bg);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s;
+      position: relative;
+    }
+    .festival-check-wrap input[type="checkbox"]:checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .festival-check-wrap input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      left: 3px; top: 0px;
+      width: 5px; height: 9px;
+      border: 2px solid #fff;
+      border-top: none; border-left: none;
+      transform: rotate(45deg);
+    }
+    body.red .festival-check-wrap input[type="checkbox"]:checked {
+      background: #ff2b2b;
+      border-color: #ff2b2b;
+    }
+    .festival-check-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+      user-select: none;
+    }
+    body.red .festival-check-label { color: #ff2b2b; }
+
     .p-name-wrap { width: 100%; }
     .p-name-wrap .p-name-input {
       width: 100%;
@@ -445,6 +491,10 @@ try {
   <!-- ── 1. Event ──────────────────────────────────────────────── -->
   <div class="form-card">
     <div class="form-card-title">Event</div>
+    <div class="festival-check-wrap">
+      <input type="checkbox" id="isFestival">
+      <label class="festival-check-label" for="isFestival">Festival?</label>
+    </div>
     <div class="field-grid-2">
       <div class="field field-full">
         <label>Event Name <span class="req">*</span></label>
@@ -708,6 +758,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
         venue_city:    venueCity,
         venue_state:   venueState,
         venue_type:    document.getElementById('venueType').value.trim(),
+        is_festival:   document.getElementById('isFestival').checked ? 1 : 0,
         performers,
       })
     });
@@ -724,6 +775,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
       document.getElementById('venueCity').value   = '';
       document.getElementById('venueState').value  = '';
       document.getElementById('venueType').value   = '';
+      document.getElementById('isFestival').checked = false;
       document.getElementById('performersList').innerHTML = '';
       rowCount = 0;
       addPerformerRow();
