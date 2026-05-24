@@ -108,20 +108,18 @@ function b2SignedRequest(string $httpMethod, string $path, array $extraHeaders =
     }
 
     $ch = curl_init($endpoint . $path);
-    $baseOpts = [
-        CURLOPT_CUSTOMREQUEST  => $httpMethod,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER     => $curlHeaders,
-    ];
-
-    // For PUT requests, send body via CURLOPT_POSTFIELDS.
-    // Do NOT use CURLOPT_PUT alongside CURLOPT_CUSTOMREQUEST — they conflict
-    // and cause curl_setopt_array() to crash with an invalid options error.
+    // Use individual curl_setopt() calls instead of curl_setopt_array()
+    // to avoid ValueError when array_merge produces unexpected keys.
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST,  $httpMethod);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER,     $curlHeaders);
     if ($httpMethod === 'PUT' && $body !== '') {
-        $baseOpts[CURLOPT_POSTFIELDS] = $body;
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
     }
-
-    curl_setopt_array($ch, array_merge($baseOpts, $curlOpts));
+    // Apply any extra curlOpts individually
+    foreach ($curlOpts as $opt => $val) {
+        curl_setopt($ch, $opt, $val);
+    }
 
     $responseBody = curl_exec($ch);
     $httpCode     = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -416,6 +414,16 @@ if ($method === 'POST') {
         }
 
         $bucket = B2_BUCKET;
+
+        // --- DEBUG: log values before signing to catch missing env vars ---
+        error_log('[B2 DELETE] bucket: ' . var_export($bucket, true));
+        error_log('[B2 DELETE] key: '    . var_export($key,    true));
+        error_log('[B2 DELETE] endpoint: ' . var_export(B2_ENDPOINT, true));
+        error_log('[B2 DELETE] region: '   . var_export(B2_REGION,   true));
+        error_log('[B2 DELETE] keyId: '    . var_export(B2_KEY_ID,   true));
+        error_log('[B2 DELETE] path will be: /' . $bucket . '/' . $key);
+        // --- END DEBUG ---
+
         $result = b2SignedRequest('DELETE', "/$bucket/$key");
 
         if ($result['error']) {
