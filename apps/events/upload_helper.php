@@ -8,15 +8,18 @@
  *   $url = uploadToB2($fileTmpPath, $fileName, $mimeType);
  */
 
+
+
+require_once $db_hosted;
 // -------------------------------------------------------
 // Configuration — replace these with your actual values
 // -------------------------------------------------------
-define('B2_KEY_ID',      '0058a6d42679e0c0000000001');
-define('B2_APP_KEY',     'K005dAeBp8ZMGLEM9sy4XbGcU/pmGrw');
-define('B2_BUCKET',      'events-memories');
-define('B2_ENDPOINT',    'https://s3.us-east-005.backblazeb2.com'); // your B2 endpoint
-define('B2_REGION',      'us-east-005');                            // your B2 region
-define('MEDIA_BASE_URL', 'https://media.crovenlabs.com');           // your Cloudflare subdomain
+define('B2_KEY_ID',      getenv('B2_KEY_ID'));
+define('B2_APP_KEY',     getenv('B2_APP_KEY'));
+define('B2_BUCKET',      getenv('B2_BUCKET'));
+define('B2_ENDPOINT',    getenv('B2_ENDPOINT')); // your B2 endpoint
+define('B2_REGION',      getenv('B2_REGION'));// your B2 region
+define('MEDIA_BASE_URL', getenv('MEDIA_BASE_URL'));// your Cloudflare subdomain
 
 // -------------------------------------------------------
 // Allowed file types and max sizes
