@@ -79,7 +79,7 @@ if ($userEventIds !== null) {
 // ─── SORT performers by order_performed ─────────────────────────────
 foreach ($events as &$event) {
     usort($event['performers'], function ($a, $b) {
-        return ($a['order_performed'] ?? 9999) <=> ($b['order_performed'] ?? 9999);
+        return ($b['order_performed'] ?? 0) <=> ($a['order_performed'] ?? 0);
     });
 }
 unset($event);
