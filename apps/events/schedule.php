@@ -8,9 +8,25 @@ $favUsers  = $usersStmt->fetchAll();
 // Reuse the same result for the JS users list (no second query needed)
 $allUsers  = $favUsers;
 
+// ─── View mode: 'mine' (default) or 'all' ───────────────────────────
+$currentUser = $_SESSION['auth_user_name'] ?? null;
+$viewMode    = isset($_GET['view']) && $_GET['view'] === 'all' ? 'all' : 'mine';
+if (!$currentUser) $viewMode = 'all';
+
 // ─── Query the view ─────────────────────────────────────────────────
 $stmt = $pdo->query("SELECT * FROM vw_full_event");
 $rows = $stmt->fetchAll();
+
+// ─── Get user's event IDs if in 'mine' mode ──────────────────────────
+$userEventIds = null;
+if ($viewMode === 'mine' && $currentUser) {
+    $uStmt = $pdo->prepare("
+        SELECT DISTINCT event_ID FROM vw_event_performers_watched_by_user
+        WHERE username = ?
+    ");
+    $uStmt->execute([$currentUser]);
+    $userEventIds = array_flip($uStmt->fetchAll(PDO::FETCH_COLUMN));
+}
 
 // ─── Pre-load all watched rows indexed by event_performer_ID ─────────
 $watchedMap = [];
@@ -55,6 +71,11 @@ foreach ($rows as $row) {
     }
 }
 
+// ─── Filter to user's events if in 'mine' mode ──────────────────────
+if ($userEventIds !== null) {
+    $events = array_intersect_key($events, $userEventIds);
+}
+
 // ─── SORT performers by order_performed ─────────────────────────────
 foreach ($events as &$event) {
     usort($event['performers'], function ($a, $b) {
@@ -89,7 +110,56 @@ $usersJson     = json_encode(array_values($allUsers),      JSON_HEX_TAG);
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Schedule – Croven Events</title>
   <link rel="stylesheet" href="css/styles.css">
-
+  <style>
+    /* ── View mode toggle ─────────────────────────────────────────── */
+    .view-mode-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px 0;
+    }
+    .view-mode-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      opacity: 0.4;
+      margin-right: 4px;
+    }
+    .view-mode-toggle {
+      display: flex;
+      background: var(--card-bg);
+      border: 1px solid var(--border-strong);
+      border-radius: 22px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .view-mode-btn {
+      padding: 6px 16px;
+      border-radius: 18px;
+      border: none;
+      background: transparent;
+      color: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      opacity: 0.45;
+      transition: opacity 0.15s, background 0.15s;
+      text-decoration: none;
+      display: inline-block;
+      line-height: 1.4;
+    }
+    .view-mode-btn:hover:not(.active) { opacity: 0.75; }
+    .view-mode-btn.active {
+      opacity: 1;
+      background: var(--accent, rgba(255,255,255,0.12));
+    }
+    .view-mode-user {
+      font-size: 0.78rem;
+      opacity: 0.4;
+      margin-left: 6px;
+    }
+  </style>
 </head>
 <body>
 
@@ -98,6 +168,24 @@ $usersJson     = json_encode(array_values($allUsers),      JSON_HEX_TAG);
   $pageTitle   = 'Schedule';
   require 'nav.php';
 ?>
+
+<!-- View Mode Toggle -->
+<div class="view-mode-bar">
+  <span class="view-mode-label">Showing</span>
+  <div class="view-mode-toggle">
+    <a href="?view=mine"
+       class="view-mode-btn <?= $viewMode === 'mine' ? 'active' : '' ?>">
+      My Events
+    </a>
+    <a href="?view=all"
+       class="view-mode-btn <?= $viewMode === 'all' ? 'active' : '' ?>">
+      All Events
+    </a>
+  </div>
+  <?php if ($viewMode === 'mine' && $currentUser): ?>
+    <span class="view-mode-user">Viewing as <?= htmlspecialchars($currentUser) ?></span>
+  <?php endif; ?>
+</div>
 
 <!-- Sub-header -->
 <div class="page-subheader">
