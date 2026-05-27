@@ -2,8 +2,24 @@
 require_once 'db/db_hosted.php';
 require_once 'api/auth.php';
 
-// ─── Fetch all raw data ──────────────────────────────────────────────
-$stmt = $pdo->query("SELECT * FROM vw_full_event ORDER BY event_StartDate ASC");
+// ─── View mode: 'mine' (default) or 'all' ───────────────────────────
+$currentUser = $_SESSION['auth_user_name'] ?? null;
+$viewMode    = isset($_GET['view']) && $_GET['view'] === 'all' ? 'all' : 'mine';
+
+// If no logged-in user, always fall back to all
+if (!$currentUser) $viewMode = 'all';
+
+// ─── Fetch raw data based on mode ───────────────────────────────────
+if ($viewMode === 'mine') {
+    $stmt = $pdo->prepare("
+        SELECT * FROM vw_event_performers_watched_by_user
+        WHERE username = ?
+        ORDER BY event_StartDate ASC
+    ");
+    $stmt->execute([$currentUser]);
+} else {
+    $stmt = $pdo->query("SELECT * FROM vw_full_event ORDER BY event_StartDate ASC");
+}
 $rows = $stmt->fetchAll();
 
 // ─── Build unified event map ─────────────────────────────────────────
@@ -519,6 +535,55 @@ $yearsJson     = json_encode($allYears,                     JSON_HEX_TAG | JSON_
       transition: opacity 0.15s;
     }
     .sort-btn:not(.active) .sort-arrow { opacity: 0.4; }
+
+    /* ── View mode toggle ────────────────────────────────────────── */
+    .view-mode-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 22px 0 0;
+    }
+    .view-mode-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      opacity: 0.4;
+      margin-right: 4px;
+    }
+    .view-mode-toggle {
+      display: flex;
+      background: var(--card-bg);
+      border: 1px solid var(--border-strong);
+      border-radius: 22px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .view-mode-btn {
+      padding: 6px 16px;
+      border-radius: 18px;
+      border: none;
+      background: transparent;
+      color: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      opacity: 0.45;
+      transition: opacity 0.15s, background 0.15s;
+      text-decoration: none;
+      display: inline-block;
+      line-height: 1.4;
+    }
+    .view-mode-btn:hover:not(.active) { opacity: 0.75; }
+    .view-mode-btn.active {
+      opacity: 1;
+      background: var(--accent, rgba(255,255,255,0.12));
+    }
+    .view-mode-user {
+      font-size: 0.78rem;
+      opacity: 0.4;
+      margin-left: 6px;
+    }
   </style>
 </head>
 <body>
@@ -530,6 +595,24 @@ $yearsJson     = json_encode($allYears,                     JSON_HEX_TAG | JSON_
 ?>
 
 <div class="stats-wrap">
+
+  <!-- View Mode Toggle -->
+  <div class="view-mode-bar">
+    <span class="view-mode-label">Showing</span>
+    <div class="view-mode-toggle">
+      <a href="?view=mine"
+         class="view-mode-btn <?= $viewMode === 'mine' ? 'active' : '' ?>">
+        My Events
+      </a>
+      <a href="?view=all"
+         class="view-mode-btn <?= $viewMode === 'all' ? 'active' : '' ?>">
+        All Events
+      </a>
+    </div>
+    <?php if ($viewMode === 'mine' && $currentUser): ?>
+      <span class="view-mode-user">Viewing as <?= htmlspecialchars($currentUser) ?></span>
+    <?php endif; ?>
+  </div>
 
   <!-- Year Filter Bar -->
   <div class="year-filter-bar" id="yearFilterBar">
