@@ -20,17 +20,20 @@ try {
 } catch (Exception $e) { /* skip */ }
 
 $navItems = [
-    'home'      => ['label' => 'Home',      'href' => 'index.php',     'icon' => '🏠'],
-    'schedule'  => ['label' => 'Schedule',  'href' => 'schedule.php',  'icon' => '📅'],
-    'new'       => ['label' => 'Add Event', 'href' => 'add_event.php', 'icon' => '➕'],
-    'favorites' => ['label' => 'Favorites', 'href' => 'favorites.php', 'icon' => '⭐'],
-    'festivals' => ['label' => 'Festivals', 'href' => 'festivals.php', 'icon' => '🛠️'],
-    'admin'     => ['label' => 'Admin',     'href' => 'admin.php',     'icon' => '🛠️'],
+    'home'      => ['label' => 'Home',      'href' => 'index.php',     'icon' => 'ti-home'],
+    'schedule'  => ['label' => 'Schedule',  'href' => 'schedule.php',  'icon' => 'ti-calendar'],
+    'new'       => ['label' => 'Add Event', 'href' => 'add_event.php', 'icon' => 'ti-plus'],
+    'favorites' => ['label' => 'Favorites', 'href' => 'favorites.php', 'icon' => 'ti-star'],
+    'festivals' => ['label' => 'Festivals', 'href' => 'festivals.php', 'icon' => 'ti-flag'],
+    'admin'     => ['label' => 'Admin',     'href' => 'admin.php',     'icon' => 'ti-shield'],
 ];
 
 $currentPage = $currentPage ?? '';
 $pageTitle   = $pageTitle   ?? 'Croven Events';
 ?>
+
+<!-- Tabler Icons (outline) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 
 <header class="site-header">
   <button class="hamburger" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false">
@@ -39,7 +42,6 @@ $pageTitle   = $pageTitle   ?? 'Croven Events';
     <span class="ham-bar"></span>
   </button>
   <span class="site-title"><?= htmlspecialchars($pageTitle) ?></span>
-  <button id="themeToggle" class="theme-toggle-btn" aria-label="Toggle theme">🌙</button>
 </header>
 
 <div class="nav-overlay" id="navOverlay"></div>
@@ -65,7 +67,7 @@ $pageTitle   = $pageTitle   ?? 'Croven Events';
       <li>
         <a href="<?= htmlspecialchars($item['href']) ?>"
            class="nav-item <?= $currentPage === $key ? 'nav-item--active' : '' ?>">
-          <span class="nav-item-icon"><?= $item['icon'] ?></span>
+          <i class="ti <?= $item['icon'] ?> nav-item-icon" aria-hidden="true"></i>
           <span class="nav-item-label"><?= htmlspecialchars($item['label']) ?></span>
           <?php if ($currentPage === $key): ?><span class="nav-item-dot"></span><?php endif; ?>
         </a>
@@ -86,71 +88,8 @@ $pageTitle   = $pageTitle   ?? 'Croven Events';
     <?php endforeach; ?>
   </ul>
 
-  <div class="nav-drawer-footer">
-    <div class="theme-picker-label">Theme</div>
-    <div class="theme-picker">
-      <button class="theme-pill" data-theme="light">☀️ Light</button>
-      <button class="theme-pill" data-theme="dark">🌙 Dark</button>
-      <button class="theme-pill" data-theme="red">🔴 Red</button>
-    </div>
-  </div>
-
 </nav>
 
-<style>
-.hamburger {
-  width: 38px; height: 38px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 10px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
-  cursor: pointer; transition: background 0.2s; padding: 0;
-}
-.hamburger:hover { background: rgba(255,255,255,0.12); }
-.ham-bar {
-  display: block; width: 16px; height: 1.5px;
-  background: rgba(255,255,255,0.85); border-radius: 2px;
-  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s cubic-bezier(0.4,0,0.2,1);
-}
-.hamburger.is-open .ham-bar:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
-.hamburger.is-open .ham-bar:nth-child(2) { opacity: 0; transform: scaleX(0); }
-.hamburger.is-open .ham-bar:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
-.nav-drawer-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.4; }
-.nav-auth-badge { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
-.nav-auth-avatar {
-  width: 30px; height: 30px; border-radius: 50%;
-  background: var(--accent, #e74c3c); color: #fff;
-  font-size: 0.85rem; font-weight: 700;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.nav-auth-name { flex: 1; font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.nav-logout-btn {
-  font-size: 0.75rem; color: inherit; opacity: 0.45; text-decoration: none;
-  border: 1px solid rgba(255,255,255,0.14); border-radius: 6px; padding: 3px 10px;
-  white-space: nowrap; flex-shrink: 0; transition: opacity 0.15s, background 0.15s;
-}
-.nav-logout-btn:hover { opacity: 1; background: rgba(255,255,255,0.08); }
-.nav-divider { height: 1px; background: var(--border, rgba(255,255,255,0.07)); margin: 0 10px 8px; }
-.nav-list { list-style: none; margin: 0; padding: 0 10px; flex: 1; overflow-y: auto; }
-.nav-item {
-  display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px;
-  font-size: 0.88rem; font-weight: 500; color: inherit; text-decoration: none;
-  opacity: 0.65; transition: background 0.15s, opacity 0.15s; margin-bottom: 2px;
-}
-.nav-item:hover        { background: var(--nav-hover, rgba(255,255,255,0.06)); opacity: 1; }
-.nav-item--active      { background: rgba(231,76,60,0.14); opacity: 1; color: var(--accent, #e74c3c); }
-.nav-item-icon         { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
-.nav-item-label        { flex: 1; }
-.nav-item-dot          { width: 6px; height: 6px; border-radius: 50%; background: var(--accent, #e74c3c); flex-shrink: 0; }
-.nav-fav-list { list-style: none; margin: 0; padding: 0 0 4px 20px; }
-.nav-fav-item {
-  display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 8px;
-  font-size: 0.82rem; text-decoration: none; color: inherit; opacity: 0.5;
-  border-left: 2px solid transparent; transition: background 0.15s, opacity 0.15s, border-color 0.15s; margin-bottom: 1px;
-}
-.nav-fav-item:hover { background: var(--nav-hover, rgba(255,255,255,0.05)); opacity: 1; border-left-color: var(--accent, #e74c3c); }
-.nav-fav-dot { width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: 0.4; flex-shrink: 0; }
-</style>
 
 <script>
 (function () {
@@ -173,24 +112,5 @@ $pageTitle   = $pageTitle   ?? 'Croven Events';
   closeBtn.addEventListener('click',  closeDrawer);
   overlay.addEventListener('click',   closeDrawer);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
-
-  const themeToggleBtn = document.getElementById('themeToggle');
-  const themes = ['dark', 'red', 'light'];
-  const themeIcons = { dark: '🌙', red: '🔴', light: '☀️' };
-
-  function applyTheme(theme) {
-    document.body.classList.remove('dark', 'red');
-    if (theme === 'dark') document.body.classList.add('dark');
-    if (theme === 'red')  document.body.classList.add('red');
-    themeToggleBtn.textContent = themeIcons[theme];
-    localStorage.setItem('theme', theme);
-    document.querySelectorAll('.theme-pill').forEach(p => p.classList.toggle('active', p.dataset.theme === theme));
-  }
-  themeToggleBtn.addEventListener('click', () => {
-    const current = localStorage.getItem('theme') || 'dark';
-    applyTheme(themes[(themes.indexOf(current) + 1) % themes.length]);
-  });
-  document.querySelectorAll('.theme-pill').forEach(p => p.addEventListener('click', () => applyTheme(p.dataset.theme)));
-  applyTheme(localStorage.getItem('theme') || 'dark');
 })();
 </script>

@@ -150,441 +150,6 @@ $yearsJson     = json_encode($allYears,                     JSON_HEX_TAG | JSON_
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Stats – Croven Events</title>
   <link rel="stylesheet" href="css/styles.css">
-  <style>
-    /* ── Page layout ─────────────────────────────────────────────── */
-    .stats-wrap {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 0 16px 60px;
-    }
-
-    /* ── Summary tiles ───────────────────────────────────────────── */
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 14px;
-      margin: 20px 0 28px;
-    }
-    .summary-tile {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 18px 20px 16px;
-      text-align: center;
-    }
-    .summary-tile .tile-number {
-      font-size: 2.2rem;
-      font-weight: 800;
-      line-height: 1;
-      margin-bottom: 6px;
-    }
-    .summary-tile .tile-label {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      opacity: 0.5;
-    }
-
-    /* ── Mode tabs ───────────────────────────────────────────────── */
-    .stats-tabs {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 20px;
-    }
-    .stats-tab {
-      padding: 8px 18px;
-      border-radius: 20px;
-      border: 1px solid var(--border-strong);
-      cursor: pointer;
-      font-size: 0.85rem;
-      font-weight: 600;
-      opacity: 0.55;
-      transition: opacity 0.15s, background 0.15s;
-      user-select: none;
-      background: transparent;
-      color: inherit;
-    }
-    .stats-tab.active {
-      opacity: 1;
-      background: var(--accent, rgba(255,255,255,0.12));
-      border-color: transparent;
-    }
-    .stats-tab:hover:not(.active) { opacity: 0.85; }
-
-    /* ── Search bar ──────────────────────────────────────────────── */
-    .stats-search-wrap {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 22px;
-      align-items: center;
-    }
-    .stats-search-inner {
-      position: relative;
-      flex: 1;
-    }
-    .stats-search-inner .search-icon {
-      position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      opacity: 0.4;
-      font-size: 1rem;
-      pointer-events: none;
-    }
-    .stats-search-inner input {
-      width: 100%;
-      box-sizing: border-box;
-      padding: 10px 14px 10px 36px;
-      border-radius: 10px;
-      border: 1px solid var(--border-strong);
-      background: var(--card-bg);
-      color: inherit;
-      font-size: 0.95rem;
-      outline: none;
-    }
-    .stats-search-inner input::placeholder { opacity: 0.35; }
-    .stats-clear-btn {
-      padding: 9px 16px;
-      border-radius: 10px;
-      border: 1px solid var(--border-strong);
-      background: transparent;
-      color: inherit;
-      font-size: 0.85rem;
-      cursor: pointer;
-      opacity: 0.6;
-      transition: opacity 0.15s;
-    }
-    .stats-clear-btn:hover { opacity: 1; }
-
-    /* ── Results area ────────────────────────────────────────────── */
-    .stats-results { }
-    .result-count {
-      font-size: 0.8rem;
-      opacity: 0.45;
-      margin-bottom: 14px;
-      letter-spacing: 0.03em;
-    }
-
-    /* ── Performer / Venue cards ─────────────────────────────────── */
-    .stats-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      margin-bottom: 14px;
-      overflow: hidden;
-    }
-    .stats-card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 18px;
-      cursor: pointer;
-      gap: 12px;
-      user-select: none;
-    }
-    .stats-card-header:hover { background: rgba(255,255,255,0.03); }
-    .stats-card-title {
-      font-weight: 700;
-      font-size: 1rem;
-      flex: 1;
-    }
-    .stats-card-sub {
-      font-size: 0.78rem;
-      opacity: 0.45;
-      margin-top: 2px;
-    }
-    .stats-card-badges {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-shrink: 0;
-    }
-    .badge-count {
-      background: var(--input-bg);
-      border-radius: 20px;
-      padding: 3px 11px;
-      font-size: 0.8rem;
-      font-weight: 700;
-    }
-    .badge-hl {
-      background: rgba(255, 193, 7, 0.18);
-      color: #ffc107;
-      border-radius: 20px;
-      padding: 3px 10px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-    .chevron {
-      opacity: 0.35;
-      font-size: 0.8rem;
-      transition: transform 0.2s;
-      flex-shrink: 0;
-    }
-    .stats-card.open .chevron { transform: rotate(180deg); }
-
-    /* ── Expandable detail ───────────────────────────────────────── */
-    .stats-card-detail {
-      display: none;
-      border-top: 1px solid var(--border);
-      padding: 14px 18px 16px;
-    }
-    .stats-card.open .stats-card-detail { display: block; }
-
-    /* ── Appearance table ────────────────────────────────────────── */
-    .appearance-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
-    }
-    .appearance-table th {
-      text-align: left;
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      opacity: 0.4;
-      padding: 0 8px 8px 0;
-      font-weight: 600;
-      border-bottom: 1px solid var(--border);
-    }
-    .appearance-table td {
-      padding: 8px 8px 8px 0;
-      vertical-align: top;
-      border-bottom: 1px solid var(--border);
-    }
-    .appearance-table tr:last-child td { border-bottom: none; }
-    .td-date { opacity: 0.55; white-space: nowrap; }
-    .td-event { font-weight: 600; }
-    .td-venue { opacity: 0.7; }
-    .td-badge { white-space: nowrap; }
-    .dot-hl { color: #ffc107; font-size: 0.7rem; margin-left: 4px; }
-    .dot-watched {
-      display: inline-block;
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: #4caf50;
-      margin-right: 4px;
-      vertical-align: middle;
-    }
-    .dot-nowatch {
-      display: inline-block;
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.2);
-      margin-right: 4px;
-      vertical-align: middle;
-    }
-
-    /* ── Performer list inside venue detail ──────────────────────── */
-    .ev-performers {
-      font-size: 0.78rem;
-      opacity: 0.55;
-    }
-
-    /* ── Year view ───────────────────────────────────────────────── */
-    .year-block {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      margin-bottom: 14px;
-      overflow: hidden;
-    }
-    .year-block-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 18px;
-      cursor: pointer;
-      user-select: none;
-    }
-    .year-block-header:hover { background: rgba(255,255,255,0.03); }
-    .year-block-title { font-weight: 700; font-size: 1.1rem; }
-    .year-block-detail {
-      display: none;
-      border-top: 1px solid var(--border);
-      padding: 12px 18px 14px;
-    }
-    .year-block.open .year-block-detail { display: block; }
-    .year-block.open .chevron { transform: rotate(180deg); }
-    .year-event-item {
-      padding: 5px 0;
-      font-size: 0.88rem;
-      border-bottom: 1px solid var(--border);
-      opacity: 0.8;
-    }
-    .year-event-item:last-child { border-bottom: none; }
-
-    .summary-tile-list {
-      text-align: left;
-    }
-    .tile-list-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 5px 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.85rem;
-    }
-    .tile-list-row:last-child { border-bottom: none; }
-    .tile-list-rank {
-      font-size: 0.7rem;
-      font-weight: 700;
-      opacity: 0.35;
-      width: 14px;
-      flex-shrink: 0;
-      text-align: right;
-    }
-    .tile-list-name {
-      flex: 1;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .tile-list-count {
-      font-size: 0.78rem;
-      font-weight: 700;
-      opacity: 0.55;
-      flex-shrink: 0;
-    }
-    .no-stats-results {
-      text-align: center;
-      opacity: 0.35;
-      padding: 40px 0;
-      font-size: 0.95rem;
-    }
-
-    /* ── Section hidden ──────────────────────────────────────────── */
-    .stats-section { display: none; }
-    .stats-section.active { display: block; }
-
-    /* ── Year filter bar (top of page) ──────────────────────────── */
-    .year-filter-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin: 20px 0 0;
-      align-items: center;
-    }
-    .year-filter-label {
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.07em;
-      text-transform: uppercase;
-      opacity: 0.4;
-      margin-right: 4px;
-    }
-    .year-pill {
-      padding: 6px 14px;
-      border-radius: 20px;
-      border: 1px solid var(--border-strong);
-      background: transparent;
-      color: inherit;
-      font-size: 0.82rem;
-      font-weight: 600;
-      cursor: pointer;
-      opacity: 0.5;
-      transition: opacity 0.15s, background 0.15s;
-    }
-    .year-pill:hover:not(.active) { opacity: 0.8; }
-    .year-pill.active {
-      opacity: 1;
-      background: var(--accent, rgba(255,255,255,0.12));
-      border-color: transparent;
-    }
-
-    /* ── Sort controls (below section tabs) ─────────────────────── */
-    .sort-controls {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      margin-bottom: 18px;
-      flex-wrap: wrap;
-    }
-    .sort-controls.hidden { display: none; }
-    .sort-label {
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.07em;
-      text-transform: uppercase;
-      opacity: 0.4;
-      margin-right: 2px;
-    }
-    .sort-btn {
-      padding: 6px 14px;
-      border-radius: 20px;
-      border: 1px solid var(--border-strong);
-      background: transparent;
-      color: inherit;
-      font-size: 0.8rem;
-      font-weight: 600;
-      cursor: pointer;
-      opacity: 0.5;
-      transition: opacity 0.15s, background 0.15s;
-    }
-    .sort-btn:hover:not(.active) { opacity: 0.8; }
-    .sort-btn.active {
-      opacity: 1;
-      background: rgba(255,255,255,0.08);
-      border-color: var(--border-strong);
-    }
-    .sort-arrow {
-      display: inline-block;
-      margin-left: 5px;
-      font-size: 0.85em;
-      transition: opacity 0.15s;
-    }
-    .sort-btn:not(.active) .sort-arrow { opacity: 0.4; }
-
-    /* ── View mode toggle ────────────────────────────────────────── */
-    .view-mode-bar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin: 22px 0 0;
-    }
-    .view-mode-label {
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.07em;
-      text-transform: uppercase;
-      opacity: 0.4;
-      margin-right: 4px;
-    }
-    .view-mode-toggle {
-      display: flex;
-      background: var(--card-bg);
-      border: 1px solid var(--border-strong);
-      border-radius: 22px;
-      padding: 3px;
-      gap: 2px;
-    }
-    .view-mode-btn {
-      padding: 6px 16px;
-      border-radius: 18px;
-      border: none;
-      background: transparent;
-      color: inherit;
-      font-size: 0.82rem;
-      font-weight: 600;
-      cursor: pointer;
-      opacity: 0.45;
-      transition: opacity 0.15s, background 0.15s;
-      text-decoration: none;
-      display: inline-block;
-      line-height: 1.4;
-    }
-    .view-mode-btn:hover:not(.active) { opacity: 0.75; }
-    .view-mode-btn.active {
-      opacity: 1;
-      background: var(--accent, rgba(255,255,255,0.12));
-    }
-    .view-mode-user {
-      font-size: 0.78rem;
-      opacity: 0.4;
-      margin-left: 6px;
-    }
-  </style>
 </head>
 <body>
 
@@ -602,25 +167,16 @@ $yearsJson     = json_encode($allYears,                     JSON_HEX_TAG | JSON_
     <div class="view-mode-toggle">
       <a href="?view=mine"
          class="view-mode-btn <?= $viewMode === 'mine' ? 'active' : '' ?>">
-        My Events
+        MY ATTENDANCE
       </a>
       <a href="?view=all"
          class="view-mode-btn <?= $viewMode === 'all' ? 'active' : '' ?>">
-        All Events
+        ALL EVENTS
       </a>
     </div>
     <?php if ($viewMode === 'mine' && $currentUser): ?>
       <span class="view-mode-user">Viewing as <?= htmlspecialchars($currentUser) ?></span>
     <?php endif; ?>
-  </div>
-
-  <!-- Year Filter Bar -->
-  <div class="year-filter-bar" id="yearFilterBar">
-    <span class="year-filter-label">Year</span>
-    <button class="year-pill active" data-year="all">All</button>
-    <?php foreach ($allYears as $yr): ?>
-      <button class="year-pill" data-year="<?= htmlspecialchars((string)$yr) ?>"><?= htmlspecialchars((string)$yr) ?></button>
-    <?php endforeach; ?>
   </div>
 
   <!-- Summary Tiles -->
@@ -629,25 +185,24 @@ $yearsJson     = json_encode($allYears,                     JSON_HEX_TAG | JSON_
     $top5Venues     = array_slice(array_values($venueStats), 0, 5);
   ?>
   <div class="summary-grid" id="summaryGrid">
-    <div class="summary-tile summary-tile-list">
-      <div class="tile-label" style="margin-bottom:10px;">Overview</div>
-      <div id="overviewRows">
-      <div class="tile-list-row">
-        <span class="tile-list-name" style="font-weight:400;">Total Events</span>
-        <span class="tile-list-count" style="opacity:1; font-size:0.9rem;" id="summaryEvents"><?= $totalEvents ?></span>
-      </div>
-      <div class="tile-list-row">
-        <span class="tile-list-name" style="font-weight:400;">Unique Performers</span>
-        <span class="tile-list-count" style="opacity:1; font-size:0.9rem;" id="summaryPerformers"><?= $totalPerformers ?></span>
-      </div>
-      <div class="tile-list-row">
-        <span class="tile-list-name" style="font-weight:400;">Unique Venues</span>
-        <span class="tile-list-count" style="opacity:1; font-size:0.9rem;" id="summaryVenues"><?= $totalVenues ?></span>
-      </div>
-      </div><!-- /overviewRows -->
+    <div class="summary-tile">
+      <div class="tile-number" id="summaryEvents"><?= $totalEvents ?></div>
+      <div class="tile-label">Events</div>
     </div>
+    <div class="summary-tile">
+      <div class="tile-number" id="summaryPerformers"><?= $totalPerformers ?></div>
+      <div class="tile-label">Performers</div>
+    </div>
+    <div class="summary-tile">
+      <div class="tile-number" id="summaryVenues"><?= $totalVenues ?></div>
+      <div class="tile-label">Venues</div>
+    </div>
+  </div><!-- /summaryGrid -->
+
+  <!-- Top Lists Grid -->
+  <div class="summary-grid summary-grid--lists">
     <div class="summary-tile summary-tile-list">
-      <div class="tile-label" style="margin-bottom:10px;">Top Performers</div>
+      <div class="tile-label">Most Seen Performers</div>
       <div id="topPerformersList">
       <?php foreach ($top5Performers as $i => $tp): ?>
         <div class="tile-list-row">
@@ -659,7 +214,7 @@ $yearsJson     = json_encode($allYears,                     JSON_HEX_TAG | JSON_
       </div><!-- /topPerformersList -->
     </div>
     <div class="summary-tile summary-tile-list">
-      <div class="tile-label" style="margin-bottom:10px;">Top Venues</div>
+      <div class="tile-label">Most Visited Venues</div>
       <div id="topVenuesList">
       <?php foreach ($top5Venues as $i => $tv): ?>
         <div class="tile-list-row">
@@ -670,20 +225,29 @@ $yearsJson     = json_encode($allYears,                     JSON_HEX_TAG | JSON_
       <?php endforeach; ?>
       </div><!-- /topVenuesList -->
     </div>
-  </div><!-- /summaryGrid -->
+  </div><!-- /summary-grid--lists -->
+
+  <!-- Year Filter Bar -->
+  <div class="year-filter-bar" id="yearFilterBar">
+    <span class="year-filter-label">Year</span>
+    <button class="year-pill active" data-year="all">All</button>
+    <?php foreach ($allYears as $yr): ?>
+      <button class="year-pill" data-year="<?= htmlspecialchars((string)$yr) ?>"><?= htmlspecialchars((string)$yr) ?></button>
+    <?php endforeach; ?>
+  </div>
 
   <!-- Mode Tabs -->
   <div class="stats-tabs">
-    <button class="stats-tab active" data-mode="performer">By Performer</button>
-    <button class="stats-tab" data-mode="venue">By Venue</button>
-    <button class="stats-tab" data-mode="year">By Year</button>
+    <button class="stats-tab active" data-mode="performer">PERFORMERS</button>
+    <button class="stats-tab" data-mode="venue">VENUES</button>
+    <button class="stats-tab" data-mode="year">BY YEAR</button>
   </div>
 
   <!-- Sort Controls -->
   <div class="sort-controls" id="sortControls">
     <span class="sort-label">Order</span>
     <button class="sort-btn active" id="sortCount" data-sort="count-desc">
-      Performance Count <span class="sort-arrow" id="sortCountArrow">↓</span>
+      COUNT <span class="sort-arrow" id="sortCountArrow">↓</span>
     </button>
     <button class="sort-btn" id="sortAlpha" data-sort="alpha-asc">
       A → Z <span class="sort-arrow" id="sortAlphaArrow">↑</span>
@@ -709,26 +273,9 @@ $yearsJson     = json_encode($allYears,                     JSON_HEX_TAG | JSON_
          data-name="<?= htmlspecialchars(strtolower($p['name'])) ?>"
          data-years="<?= htmlspecialchars(implode(',', $pYears)) ?>"
          data-total="<?= $p['total'] ?>">
-      <div class="stats-card-header" onclick="toggleCard(this)">
-        <div>
-          <div class="stats-card-title"><?= htmlspecialchars($p['name']) ?></div>
-          <div class="stats-card-sub">
-            <?php
-              $venueList = array_unique(array_column($p['appearances'], 'venue_Name'));
-              $yearList  = array_unique(array_filter(array_column($p['appearances'], 'event_Year')));
-              sort($yearList);
-            ?>
-            <?= count($venueList) ?> venue<?= count($venueList) !== 1 ? 's' : '' ?> ·
-            <?= implode(', ', $yearList) ?>
-          </div>
-        </div>
-        <div class="stats-card-badges">
-          <span class="badge-count"><?= $p['total'] ?>×</span>
-          <?php if ($p['headliner_count'] > 0): ?>
-            <span class="badge-hl">★ <?= $p['headliner_count'] ?>× headliner</span>
-          <?php endif; ?>
-        </div>
-        <span class="chevron">▼</span>
+      <div class="stats-card-header" onclick="toggleCard(this)" style="position:relative; justify-content:center;">
+        <div class="stats-card-title" style="text-align:center;"><?= htmlspecialchars($p['name']) ?></div>
+        <span class="chevron" style="position:absolute; right:1rem;">▼</span>
       </div>
       <div class="stats-card-detail">
         <table class="appearance-table">
@@ -777,17 +324,9 @@ $yearsJson     = json_encode($allYears,                     JSON_HEX_TAG | JSON_
          data-name="<?= htmlspecialchars(strtolower($v['name'] . ' ' . ($v['city'] ?? '') . ' ' . ($v['state'] ?? ''))) ?>"
          data-years="<?= htmlspecialchars(implode(',', $vYears)) ?>"
          data-total="<?= $v['total'] ?>">
-      <div class="stats-card-header" onclick="toggleCard(this)">
-        <div>
-          <div class="stats-card-title"><?= htmlspecialchars($v['name']) ?></div>
-          <div class="stats-card-sub">
-            <?= htmlspecialchars(implode(', ', array_filter([$v['city'], $v['state']]))) ?>
-          </div>
-        </div>
-        <div class="stats-card-badges">
-          <span class="badge-count"><?= $v['total'] ?> event<?= $v['total'] !== 1 ? 's' : '' ?></span>
-        </div>
-        <span class="chevron">▼</span>
+      <div class="stats-card-header" onclick="toggleCard(this)" style="position:relative; justify-content:center;">
+        <div class="stats-card-title" style="text-align:center;"><?= htmlspecialchars($v['name']) ?></div>
+        <span class="chevron" style="position:absolute; right:1rem;">▼</span>
       </div>
       <div class="stats-card-detail">
         <table class="appearance-table">
@@ -840,12 +379,9 @@ $yearsJson     = json_encode($allYears,                     JSON_HEX_TAG | JSON_
   <div class="stats-section" id="section-year">
     <?php foreach ($yearStats as $yr => $y): ?>
     <div class="year-block" data-name="<?= htmlspecialchars((string)$yr) ?>">
-      <div class="year-block-header" onclick="toggleCard(this)">
-        <div class="year-block-title"><?= htmlspecialchars((string)$yr) ?></div>
-        <div class="stats-card-badges">
-          <span class="badge-count"><?= $y['total'] ?> event<?= $y['total'] !== 1 ? 's' : '' ?></span>
-        </div>
-        <span class="chevron">▼</span>
+      <div class="year-block-header" onclick="toggleCard(this)" style="position:relative; justify-content:center;">
+        <div class="year-block-title" style="text-align:center;"><?= htmlspecialchars((string)$yr) ?></div>
+        <span class="chevron" style="position:absolute; right:1rem;">▼</span>
       </div>
       <div class="year-block-detail">
         <table class="appearance-table">
