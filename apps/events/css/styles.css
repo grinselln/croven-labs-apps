@@ -1534,3 +1534,223 @@ STATS PAGE — YEAR BLOCKS
 }
 
 .year-event-item:last-child { border-bottom: none; }
+
+/* ══════════════════════════════════════════
+LOGIN PAGE
+══════════════════════════════════════════ */
+
+body.login-page {
+  padding-top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  background: var(--nav-bg);
+  position: relative;
+}
+
+/* Same grid texture as the nav drawer */
+body.login-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(139,0,0,0.04) 40px, rgba(139,0,0,0.04) 41px),
+    repeating-linear-gradient(90deg, transparent, transparent 60px, rgba(139,0,0,0.03) 60px, rgba(139,0,0,0.03) 61px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.login-wrap {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Brand block (unified top of card) ── */
+
+.login-brand {
+  text-align: center;
+  padding: 22px 24px 18px;
+  background: var(--nav-bg);
+  border: 2px solid var(--nav-border);
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+}
+
+.login-brand-icon {
+  font-size: 30px;
+  margin-bottom: 8px;
+  display: block;
+  filter: drop-shadow(0 0 10px rgba(192,57,43,0.45));
+}
+
+.login-brand-name {
+  font-family: 'Cinzel', serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--nav-text);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.login-brand-sub {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--nav-text-dim);
+  margin-top: 5px;
+  text-transform: uppercase;
+}
+
+/* Crimson gradient divider between brand and card */
+.login-divider {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--nav-border) 20%, var(--nav-accent) 50%, var(--nav-border) 80%, transparent);
+}
+
+/* ── Main card ── */
+
+.login-card {
+  background: #0f0000;
+  border: 2px solid var(--nav-border);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  padding: 22px 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.login-card-title {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  color: var(--nav-text-dim);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+/* ── Error message ── */
+
+.login-error {
+  background: rgba(139, 0, 0, 0.18);
+  border: 1px solid var(--nav-border);
+  color: var(--nav-text-dim);
+  border-radius: 6px;
+  padding: 9px 13px;
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  animation: fadeIn 0.2s ease;
+}
+
+/* ── Fields ── */
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.login-field label {
+  font-family: 'Cinzel', serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--nav-text-dim);
+}
+
+/* Input row with icon slot — matches nav drawer style */
+.login-input-row {
+  display: flex;
+  align-items: stretch;
+  background: #1a0000;
+  border: 1px solid var(--nav-border-subtle);
+  border-radius: 6px;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.login-input-row:focus-within {
+  border-color: var(--nav-border);
+  box-shadow: 0 0 0 1px rgba(139,0,0,0.25);
+}
+
+.login-input-row input {
+  flex: 1;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--nav-text);
+  width: 100%;
+}
+
+.login-input-row input::placeholder {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  letter-spacing: 0;
+  color: #3d0000;
+  opacity: 1;
+}
+
+.login-input-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 11px;
+  background: rgba(139,0,0,0.1);
+  border-left: 1px solid #2a0000;
+  color: var(--nav-accent);
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.login-input-icon:hover {
+  background: rgba(139,0,0,0.22);
+}
+
+/* ── Submit button ── */
+
+.login-submit {
+  width: 100%;
+  padding: 11px;
+  background: var(--nav-accent);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  margin-top: 2px;
+  transition: background 0.15s, opacity 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-submit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.login-submit:hover  { background: #a93226; }
+.login-submit:active { opacity: 0.8; }
