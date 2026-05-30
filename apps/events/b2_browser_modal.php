@@ -51,33 +51,28 @@
       </div><!-- /browse panel -->
 
       <!-- ── UPLOAD PANEL ──────────────────────────────────────────── -->
-      <div class="b2b-panel" id="b2bPanelUpload" style="display:none">
+      <div class="b2b-panel b2b-panel-upload" id="b2bPanelUpload" style="display:none">
 
-        <div class="b2b-upload-area">
-
-          <!-- Drop zone -->
+        <!-- Drop zone (left column) -->
+        <div class="b2b-upload-top">
           <div class="b2b-drop-zone" id="b2bDropZone">
             <input type="file" id="b2bFileInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
             <div class="b2b-drop-icon">&#128247;</div>
             <p class="b2b-drop-label">Drop images here or <strong>click to browse</strong></p>
             <p class="b2b-drop-hint">JPG · PNG · WEBP · GIF</p>
           </div>
+        </div>
 
-          <!-- Upload queue -->
-          <div class="b2b-queue" id="b2bQueue" style="display:none"></div>
-
-          <!-- Upload button -->
-          <button class="b2b-upload-btn" id="b2bUploadBtn" style="display:none" disabled>
-            Upload Files
-          </button>
-
+        <!-- Upload queue (right column, scrollable) -->
+        <div class="b2b-queue-scroll" id="b2bQueueScroll" style="display:none">
+          <div class="b2b-queue" id="b2bQueue"></div>
         </div>
 
       </div><!-- /upload panel -->
 
     </div><!-- /b2b-body -->
 
-    <!-- Footer bar: path indicator -->
+    <!-- Footer bar: path indicator + upload button (upload tab only) -->
     <div class="b2b-footer">
       <span class="b2b-path" id="b2bPath">
         <span class="b2b-crumb">Buckets</span>
@@ -91,6 +86,9 @@
         <span class="b2b-crumb b2b-crumb-active">memories</span>
       </span>
       <span class="b2b-file-count" id="b2bFileCount"></span>
+      <button class="b2b-upload-btn" id="b2bUploadBtn" disabled style="display:none">
+        Upload Files
+      </button>
     </div>
 
   </div>
@@ -135,7 +133,8 @@
   border-radius: 16px;
   width: 100%;
   max-width: 860px;
-  max-height: 86vh;
+  min-height: 60vh;
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 40px 100px rgba(0,0,0,0.9);
@@ -201,13 +200,17 @@
 
 /* ── Body ────────────────────────────────────────────────────────── */
 .b2b-body {
-  flex: 1;
+  flex: 1 1 0px;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   min-height: 0;
-  position: relative;
+  /* flex-basis 0 is the key: with max-height on parent, this forces
+     the body to shrink/grow within the clamped space */
 }
 .b2b-panel {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -286,21 +289,52 @@
 }
 
 /* ── Upload panel ────────────────────────────────────────────────── */
-.b2b-upload-area {
-  padding: 24px;
+/* Side-by-side: drop zone (left, ~22%) + queue scroll (right, rest).
+   The flex chain that allows scroll: b2b-body (flex col, overflow hidden)
+   → b2b-panel-upload (flex row, overflow hidden, height 100%)
+   → b2b-queue-scroll (flex 1, overflow-y auto, min-height 0)          */
+.b2b-panel-upload {
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+}
+.b2b-panel-upload.b2b-panel-visible {
+  display: flex;
+}
+.b2b-upload-top {
+  width: 22%;
+  min-width: 160px;
+  flex-shrink: 0;
+  padding: 16px 12px 16px 16px;
+  border-right: 1px solid rgba(255,255,255,0.06);
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  min-height: 340px;
+  overflow: hidden;
+}
+.b2b-queue-scroll {
+  flex: 1 1 0;
+  overflow-y: auto;
+  padding: 12px 16px 12px 12px;
+  min-height: 0;
+  min-width: 0;
+}
+.b2b-upload-footer {
+  display: none; /* no longer used — button moved to global footer */
 }
 .b2b-drop-zone {
   border: 2px dashed rgba(255,255,255,0.14);
   border-radius: 12px;
-  padding: 48px 24px;
+  padding: 24px 12px;
   text-align: center;
   cursor: pointer;
   position: relative;
   transition: border-color 0.15s, background 0.15s;
+  flex: 1;          /* fill the full height of b2b-upload-top */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 .b2b-drop-zone:hover,
 .b2b-drop-zone.dragover {
@@ -412,9 +446,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 18px;
+  padding: 7px 18px;
   border-top: 1px solid rgba(255,255,255,0.06);
   flex-shrink: 0;
+  gap: 12px;
 }
 .b2b-path {
   display: flex;
@@ -636,7 +671,17 @@
       t.classList.toggle('active', t.dataset.tab === name);
     });
     panelBrowse.style.display = name === 'browse' ? '' : 'none';
-    panelUpload.style.display = name === 'upload' ? '' : 'none';
+    // Upload panel uses flex layout — class controls display to avoid !important fights
+    if (name === 'upload') {
+      panelUpload.style.display = '';
+      panelUpload.classList.add('b2b-panel-visible');
+      // Show upload button only if there are queued files
+      uploadBtn.style.display = uploadQueue.length ? '' : 'none';
+    } else {
+      panelUpload.style.display = 'none';
+      panelUpload.classList.remove('b2b-panel-visible');
+      uploadBtn.style.display = 'none';
+    }
   }
 
   /* ══════════════════════════════════════════════════════════════════
@@ -830,9 +875,11 @@
       uploadQueue.push(item);
       renderQueueItem(item);
     });
-    queueEl.style.display  = uploadQueue.length ? 'flex' : 'none';
-    uploadBtn.style.display = uploadQueue.length ? 'inline-block' : 'none';
-    uploadBtn.disabled      = false;
+    var queueScroll = document.getElementById('b2bQueueScroll');
+    queueEl.style.display     = uploadQueue.length ? 'flex' : 'none';
+    queueScroll.style.display = uploadQueue.length ? 'block' : 'none';
+    uploadBtn.style.display   = uploadQueue.length ? '' : 'none';
+    uploadBtn.disabled        = false;
   }
 
   function renderQueueItem(item) {
@@ -881,8 +928,9 @@
       row.remove();
       URL.revokeObjectURL(item.previewUrl);
       if (!uploadQueue.length) {
-        queueEl.style.display   = 'none';
-        uploadBtn.style.display = 'none';
+        queueEl.style.display    = 'none';
+        document.getElementById('b2bQueueScroll').style.display = 'none';
+        uploadBtn.style.display  = 'none';
       }
     });
 
@@ -910,6 +958,7 @@
         uploadQueue = [];
         queueEl.innerHTML    = '';
         queueEl.style.display   = 'none';
+        document.getElementById('b2bQueueScroll').style.display = 'none';
         uploadBtn.style.display = 'none';
         // Switch to browse to see newly uploaded images
         switchTab('browse');
@@ -990,6 +1039,7 @@
     uploadQueue             = [];
     queueEl.innerHTML       = '';
     queueEl.style.display   = 'none';
+    document.getElementById('b2bQueueScroll').style.display = 'none';
     uploadBtn.style.display = 'none';
     uploadBtn.disabled      = false;
     grid.innerHTML          = '';
