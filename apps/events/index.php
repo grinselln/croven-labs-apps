@@ -201,16 +201,62 @@ $yearsJson     = json_encode($allYears,                     JSON_HEX_TAG | JSON_
       font-family: 'Cinzel', serif; font-size: .6rem; letter-spacing: .12em;
       text-transform: uppercase; color: var(--muted); margin-top: .35rem;
     }
-    .summary-grid--lists { grid-template-columns: repeat(2, minmax(0,1fr)); }
-    .summary-tile-list { text-align: left; }
-    .summary-tile-list .tile-label { margin-bottom: .6rem; color: var(--nav-text-dim); }
-    .tile-list-row { display: flex; align-items: center; gap: .5rem; padding: .22rem 0; }
+    /* ── Tabbed summary card ── */
+    .summary-tabbed-card {
+      margin: 0 1rem .85rem;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .summary-tab-header {
+      text-align: center;
+      padding: .55rem 1rem .45rem;
+      border-bottom: 1px solid var(--border);
+      font-family: 'Cinzel', serif;
+      font-size: .72rem;
+      letter-spacing: .28em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .summary-tab-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+    .summary-tab-btn {
+      flex: 1; padding: .55rem .4rem;
+      background: transparent; border: none;
+      font-family: 'Cinzel', serif; font-size: .68rem;
+      letter-spacing: .1em; text-transform: uppercase;
+      color: var(--muted); cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color .15s, border-color .15s;
+    }
+    .summary-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .summary-tab-pane { display: none; }
+    .summary-tab-pane.active { display: block; }
+    .tile-list-row {
+      display: flex; align-items: center; gap: .65rem;
+      padding: .55rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .tile-list-row:last-child { border-bottom: none; }
     .tile-list-rank {
       font-family: 'Cinzel', serif; font-size: .62rem;
-      color: var(--border-strong); width: 1rem; flex-shrink: 0;
+      color: var(--border-strong); width: 1rem; flex-shrink: 0; text-align: right;
     }
-    .tile-list-name { flex: 1; font-size: .78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
-    .tile-list-count { font-size: .7rem; color: var(--muted); }
+    .tile-list-name {
+      flex: 1; font-size: .82rem; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; color: var(--text);
+    }
+    .tile-list-count {
+      font-size: .7rem; color: var(--accent);
+      background: var(--headliner-bg);
+      padding: .15rem .55rem; border-radius: 99px;
+      border: 1px solid var(--border-strong);
+      flex-shrink: 0;
+    }
 
     /* ── Year filter pills ── */
     .year-filter-bar {
@@ -249,9 +295,11 @@ $yearsJson     = json_encode($allYears,                     JSON_HEX_TAG | JSON_
 
     /* ── Sort + search bar ── */
     .controls-bar {
-      display: flex; align-items: center; gap: .5rem;
+      display: flex; flex-direction: column; gap: .45rem;
       padding: .6rem 1rem; border-bottom: 1px solid var(--border);
     }
+    .controls-bar-search { display: flex; width: 100%; }
+    .controls-bar-sort   { display: flex; gap: .5rem; }
     .sort-btn {
       padding: .28rem .65rem; border-radius: 4px;
       border: 1px solid var(--border-strong); background: transparent;
@@ -266,7 +314,7 @@ $yearsJson     = json_encode($allYears,                     JSON_HEX_TAG | JSON_
       flex: 1; display: flex; align-items: center; gap: .4rem;
       background: var(--input-bg); border: 1px solid var(--border-strong);
       border-radius: 5px; padding: .32rem .65rem;
-      transition: border-color .15s;
+      transition: border-color .15s; width: 100%;
     }
     .search-wrap:focus-within { border-color: var(--nav-accent); }
     .search-wrap svg { flex-shrink: 0; color: var(--nav-accent); opacity: .7; }
@@ -500,10 +548,14 @@ $yearsJson     = json_encode($allYears,                     JSON_HEX_TAG | JSON_
     </div>
   </div>
 
-  <!-- Top Lists -->
-  <div class="summary-grid summary-grid--lists">
-    <div class="summary-tile summary-tile-list">
-      <div class="tile-label">Most seen performers</div>
+  <!-- Top Lists — tabbed card -->
+  <div class="summary-tabbed-card">
+    <div class="summary-tab-header">Top 5</div>
+    <div class="summary-tab-bar">
+      <button class="summary-tab-btn active" onclick="switchSummaryTab('perf',this)">Performers</button>
+      <button class="summary-tab-btn"        onclick="switchSummaryTab('venue',this)">Venues</button>
+    </div>
+    <div class="summary-tab-pane active" id="sum-pane-perf">
       <div id="topPerformersList">
         <?php foreach ($top5Performers as $i => $tp): ?>
           <div class="tile-list-row">
@@ -514,8 +566,7 @@ $yearsJson     = json_encode($allYears,                     JSON_HEX_TAG | JSON_
         <?php endforeach; ?>
       </div>
     </div>
-    <div class="summary-tile summary-tile-list">
-      <div class="tile-label">Most visited venues</div>
+    <div class="summary-tab-pane" id="sum-pane-venue">
       <div id="topVenuesList">
         <?php foreach ($top5Venues as $i => $tv): ?>
           <div class="tile-list-row">
@@ -546,11 +597,15 @@ $yearsJson     = json_encode($allYears,                     JSON_HEX_TAG | JSON_
 
   <!-- Sort + Search Bar -->
   <div class="controls-bar" id="sortControls">
-    <button class="sort-btn active" id="sortCount">Count <span class="sort-arrow" id="sortCountArrow">↓</span></button>
-    <button class="sort-btn" id="sortAlpha">A–Z <span class="sort-arrow" id="sortAlphaArrow">↑</span></button>
-    <div class="search-wrap">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input type="text" id="statsSearch" placeholder="Search…" autocomplete="off">
+    <div class="controls-bar-search">
+      <div class="search-wrap">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="statsSearch" placeholder="Search…" autocomplete="off">
+      </div>
+    </div>
+    <div class="controls-bar-sort">
+      <button class="sort-btn active" id="sortCount">Count <span class="sort-arrow" id="sortCountArrow">↓</span></button>
+      <button class="sort-btn" id="sortAlpha">A–Z <span class="sort-arrow" id="sortAlphaArrow">↑</span></button>
     </div>
   </div>
 
@@ -911,6 +966,14 @@ function applyFiltersAndSort() {
   filtered.forEach(r => { r.style.display = ''; section.insertBefore(r, noEl); });
   noEl.style.display = filtered.length === 0 ? 'block' : 'none';
   resultEl.textContent = `${filtered.length} ${label}${filtered.length !== 1 ? 's' : ''}${q ? ` matching "${q}"` : ''}${activeYear !== 'all' ? ` in ${activeYear}` : ''}`;
+}
+
+// ── Summary tab switcher ────────────────────────────────────────────
+function switchSummaryTab(id, el) {
+  document.querySelectorAll('.summary-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.summary-tab-pane').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('sum-pane-' + id).classList.add('active');
 }
 
 // ── Init ────────────────────────────────────────────────────────────
