@@ -48,3 +48,4 @@ fa-solid fa-snowflake||Winter
 fa-solid fa-leaf||Autumn
 fa-brands fa-spotify||Spotify
 fa-solid fa-radio||Radio
+fa-solid fa-compact-disc||Disc
