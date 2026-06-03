@@ -162,9 +162,9 @@ foreach ($items as $item) {
   .card-dt i  { font-size:0.65rem; opacity:0.7; }
 
   /* RIGHT: countdown */
-  .card-countdown { display:flex; flex-direction:column; align-items:flex-end; flex-shrink:0; min-width:72px; }
+  .card-countdown { display:flex; flex-direction:column; align-items:center; flex-shrink:0; min-width:72px; }
   .cd-days  { font-family:var(--sans); font-size:2.1rem; font-weight:800; color:#fff; line-height:1; }
-  .cd-label { font-size:0.58rem; color:rgba(255,255,255,0.7); margin-top:2px; text-align:right; white-space:nowrap; }
+  .cd-label { font-size:0.58rem; color:rgba(255,255,255,0.7); margin-top:2px; text-align:center; white-space:nowrap; }
   .cd-past  { font-size:0.7rem; font-family:var(--mono); color:rgba(255,255,255,0.85); text-transform:uppercase; letter-spacing:.06em; background:rgba(0,0,0,0.2); padding:3px 7px; border-radius:6px; }
 
   .card-delete { position:absolute; top:5px; right:6px; background:none; border:none; color:rgba(255,255,255,0.4); cursor:pointer; padding:3px 5px; border-radius:6px; font-size:0.8rem; opacity:0; transition:opacity .2s, color .2s, background .2s; z-index:2; }
