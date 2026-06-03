@@ -1,0 +1,50 @@
+fa-solid fa-calendar-days||Calendar
+fa-solid fa-music||Music
+fa-solid fa-guitar||Guitar
+fa-solid fa-drum||Drums
+fa-solid fa-microphone||Microphone
+fa-solid fa-headphones||Headphones
+fa-solid fa-ticket||Ticket
+fa-solid fa-masks-theater||Theater
+fa-solid fa-film||Film
+fa-solid fa-camera||Camera
+fa-solid fa-trophy||Trophy
+fa-solid fa-futbol||Soccer
+fa-solid fa-basketball||Basketball
+fa-solid fa-football||Football
+fa-solid fa-baseball||Baseball
+fa-solid fa-dumbbell||Gym
+fa-solid fa-person-swimming||Swimming
+fa-solid fa-plane||Flight
+fa-solid fa-train||Train
+fa-solid fa-ship||Cruise
+fa-solid fa-campground||Camping
+fa-solid fa-mountain||Hiking
+fa-solid fa-umbrella-beach||Beach
+fa-solid fa-map||Travel
+fa-solid fa-cake-candles||Birthday
+fa-solid fa-champagne-glasses||Celebration
+fa-solid fa-gift||Gift
+fa-solid fa-heart||Anniversary
+fa-solid fa-star||Special
+fa-solid fa-fire||Hot Event
+fa-solid fa-graduation-cap||Graduation
+fa-solid fa-briefcase||Work
+fa-solid fa-stethoscope||Medical
+fa-solid fa-house||Home
+fa-solid fa-users||Gathering
+fa-solid fa-utensils||Dinner
+fa-solid fa-pizza-slice||Pizza Night
+fa-solid fa-beer-mug-empty||Drinks
+fa-solid fa-car||Road Trip
+fa-solid fa-gamepad||Gaming
+fa-solid fa-book||Reading
+fa-solid fa-paintbrush||Art
+fa-solid fa-bolt||Concert
+fa-solid fa-gem||Special Occasion
+fa-solid fa-moon||Night Out
+fa-solid fa-sun||Daytime
+fa-solid fa-snowflake||Winter
+fa-solid fa-leaf||Autumn
+fa-brands fa-spotify||Spotify
+fa-solid fa-radio||Radio
