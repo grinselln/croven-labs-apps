@@ -102,6 +102,8 @@ foreach ($items as $item) {
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1/dist/iconify-icon.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.css"/>
+<script src="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -509,6 +511,8 @@ foreach ($items as $item) {
       <div class="icon-grid" id="iconGrid"></div>
       <h4>Background Color</h4>
       <div class="color-row" id="colorSwatches"></div>
+      <!-- Hidden input that Coloris attaches to -->
+      <input type="text" id="colorisInput" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;" readonly>
     </div>
 
     <!-- Scrollable fields -->
@@ -645,24 +649,30 @@ COLORS.forEach(c => {
   s.onclick = () => setColor(c);
   swatchRow.appendChild(s);
 });
-// Custom color — hidden input triggered by a visible button (Android-friendly)
-const customColorInput = document.createElement('input');
-customColorInput.type = 'color';
-customColorInput.id = 'customColorPicker';
-customColorInput.value = currentColor;
-customColorInput.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
-customColorInput.addEventListener('input', e => setColor(e.target.value));
-customColorInput.addEventListener('change', e => setColor(e.target.value));
 
-const customColorBtn = document.createElement('button');
-customColorBtn.type = 'button';
-customColorBtn.title = 'Custom color';
-customColorBtn.style.cssText = 'width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px dashed rgba(255,255,255,0.5);background:var(--text-muted);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.7rem;color:#fff;padding:0;';
-customColorBtn.textContent = '＋';
-customColorBtn.onclick = () => { customColorInput.value = currentColor; customColorInput.click(); };
+// "Custom…" button triggers Coloris picker
+const customBtn = document.createElement('button');
+customBtn.type = 'button';
+customBtn.title = 'Custom color';
+customBtn.style.cssText = 'width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px dashed rgba(255,255,255,0.5);background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);flex-shrink:0;padding:0;';
+customBtn.onclick = (e) => {
+  e.stopPropagation();
+  const inp = document.getElementById('colorisInput');
+  inp.value = currentColor;
+  inp.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+};
+swatchRow.appendChild(customBtn);
 
-swatchRow.appendChild(customColorInput);
-swatchRow.appendChild(customColorBtn);
+// Init Coloris
+Coloris({
+  el: '#colorisInput',
+  theme: 'polaroid',
+  themeMode: 'dark',
+  format: 'hex',
+  alpha: false,
+  swatches: COLORS,
+  onChange: (color) => { setColor(color); }
+});
 
 function setIcon(cls) {
   currentIcon = cls;
