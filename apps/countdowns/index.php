@@ -3,17 +3,14 @@
 require_once 'db/db_hosted.php';
 // $pdo is provided by db_hosted.php
 
-// ─── LOAD ICONS FROM FILE ────────────────────────────────────────────────────
+// ─── LOAD ICONS FROM DB ──────────────────────────────────────────────────────
 $iconList = [];
-$iconsFile = __DIR__ . '/icons.txt';
-if (file_exists($iconsFile)) {
-    $lines = file($iconsFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        $parts = array_map('trim', explode('||', $line));
-        if (count($parts) >= 2 && $parts[0] !== '') {
-            $iconList[] = ['class' => $parts[0], 'label' => $parts[1]];
-        }
-    }
+try {
+    $iconList = $pdo->query(
+        "SELECT class, label FROM icons ORDER BY sort_order ASC, id ASC"
+    )->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    // icons table may not exist yet; gracefully ignore
 }
 
 // ─── LOAD CALENDARS FOR DROPDOWN ─────────────────────────────────────────────
@@ -104,6 +101,7 @@ foreach ($items as $item) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/iconify-icon@1/dist/iconify-icon.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -379,6 +377,8 @@ foreach ($items as $item) {
       <div class="card-icon-wrap">
         <?php if ($iconDisp && strpos($iconDisp, 'fa-') === 0): ?>
           <i class="<?= htmlspecialchars($iconDisp) ?>"></i>
+        <?php elseif ($iconDisp && strpos($iconDisp, 'iconify:') === 0): ?>
+          <iconify-icon icon="<?= htmlspecialchars(substr($iconDisp, 8)) ?>" width="20" height="20" style="color:#fff"></iconify-icon>
         <?php else: ?>
           <?= htmlspecialchars($iconDisp) ?>
         <?php endif; ?>
@@ -605,6 +605,14 @@ const COLORS = ['#c0392b','#e74c3c','#e67e22','#f39c12','#27ae60',
                 '#2ecc71','#2980b9','#3498db','#8e44ad','#9b59b6',
                 '#16a085','#2a9d8f','#d35400','#c0392b','#1a1a2e','#2c3e50'];
 
+// ── ICON RENDER HELPER ───────────────────────────────────────────────────────
+function iconHtmlFor(cls, size) {
+  if (cls.startsWith('iconify:')) {
+    return `<iconify-icon icon="${cls.slice(8)}" width="${size}" height="${size}"></iconify-icon>`;
+  }
+  return `<i class="${cls}"></i>`;
+}
+
 // Build icon grid
 function buildIconGrid(filter) {
   const grid = document.getElementById('iconGrid');
@@ -617,7 +625,7 @@ function buildIconGrid(filter) {
     b.className = 'icon-btn' + (ic.class === currentIcon ? ' selected' : '');
     b.type = 'button';
     b.title = ic.label;
-    b.innerHTML = `<i class="${ic.class}"></i><span>${ic.label}</span>`;
+    b.innerHTML = `${iconHtmlFor(ic.class, 26)}<span>${ic.label}</span>`;
     b.onclick = () => { setIcon(ic.class); buildIconGrid(document.getElementById('iconSearch').value); };
     grid.appendChild(b);
   });
@@ -637,16 +645,45 @@ COLORS.forEach(c => {
   s.onclick = () => setColor(c);
   swatchRow.appendChild(s);
 });
-// Custom color input
-const customColor = document.createElement('input');
-customColor.type = 'color'; customColor.className = 'color-picker-input'; customColor.title = 'Custom color';
-customColor.oninput = e => setColor(e.target.value);
-swatchRow.appendChild(customColor);
+// Custom color — hidden input triggered by a visible button (Android-friendly)
+const customColorInput = document.createElement('input');
+customColorInput.type = 'color';
+customColorInput.id = 'customColorPicker';
+customColorInput.value = currentColor;
+customColorInput.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
+customColorInput.addEventListener('input', e => setColor(e.target.value));
+customColorInput.addEventListener('change', e => setColor(e.target.value));
+
+const customColorBtn = document.createElement('button');
+customColorBtn.type = 'button';
+customColorBtn.title = 'Custom color';
+customColorBtn.style.cssText = 'width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px dashed rgba(255,255,255,0.5);background:var(--text-muted);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.7rem;color:#fff;padding:0;';
+customColorBtn.textContent = '＋';
+customColorBtn.onclick = () => { customColorInput.value = currentColor; customColorInput.click(); };
+
+swatchRow.appendChild(customColorInput);
+swatchRow.appendChild(customColorBtn);
 
 function setIcon(cls) {
   currentIcon = cls;
-  const el = document.getElementById('heroIconDisplay');
-  el.className = cls;
+  const btn = document.getElementById('heroIconBtn');
+  const old = document.getElementById('heroIconDisplay');
+  if (old) old.remove();
+  let el;
+  if (cls.startsWith('iconify:')) {
+    el = document.createElement('iconify-icon');
+    el.setAttribute('icon', cls.slice(8));
+    el.setAttribute('width', '26');
+    el.setAttribute('height', '26');
+    el.style.color = '#fff';
+    el.style.pointerEvents = 'none';
+  } else {
+    el = document.createElement('i');
+    el.className = cls;
+    el.style.pointerEvents = 'none';
+  }
+  el.id = 'heroIconDisplay';
+  btn.insertBefore(el, document.getElementById('heroColorDot'));
 }
 function setColor(c) {
   currentColor = c;
@@ -715,7 +752,9 @@ function openViewModal(item) {
   const vCircle = document.getElementById('vIconCircle');
   vCircle.style.background = color;
   if (icon.startsWith('fa-')) {
-    vCircle.innerHTML = `<i class="${icon}"></i>`;
+    vCircle.innerHTML = `<i class="${icon}" style="color:#fff;font-size:1.7rem"></i>`;
+  } else if (icon.startsWith('iconify:')) {
+    vCircle.innerHTML = `<iconify-icon icon="${icon.slice(8)}" width="34" height="34" style="color:#fff"></iconify-icon>`;
   } else {
     vCircle.textContent = icon;
   }
@@ -967,7 +1006,9 @@ function buildCardEl(item) {
 
   const iconHtml = icon.startsWith('fa-')
     ? `<i class="${escHtml(icon)}"></i>`
-    : escHtml(icon);
+    : icon.startsWith('iconify:')
+      ? `<iconify-icon icon="${escHtml(icon.slice(8))}" width="20" height="20" style="color:#fff"></iconify-icon>`
+      : escHtml(icon);
 
   const div = document.createElement('div');
   div.className = 'card ' + (isPast ? 'is-past' : 'is-future');
