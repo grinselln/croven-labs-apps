@@ -16,7 +16,7 @@ try {
 // ─── LOAD CALENDARS FOR DROPDOWN ─────────────────────────────────────────────
 $calendars = [];
 try {
-    $calendars = $pdo->query("SELECT id, name FROM calendars ORDER BY name")->fetchAll();
+    $calendars = $pdo->query("SELECT id, label FROM countdowns_calendar ORDER BY label")->fetchAll();
 } catch (Exception $e) {
     // calendars table may not exist yet; gracefully ignore
 }
@@ -58,6 +58,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $fields['id'] = $id;
             echo json_encode(['success' => true, 'item' => $fields]);
         }
+        exit;
+    }
+
+    if ($action === 'cal_add') {
+        $label = trim($_POST['label'] ?? '');
+        if ($label === '') { echo json_encode(['error' => 'Label required']); exit; }
+        $stmt = $pdo->prepare("INSERT INTO countdowns_calendar (label) VALUES (?)");
+        $stmt->execute([$label]);
+        echo json_encode(['success' => true, 'id' => (int)$pdo->lastInsertId()]);
+        exit;
+    }
+
+    if ($action === 'cal_delete') {
+        $id = (int)($_POST['id'] ?? 0);
+        $pdo->prepare("DELETE FROM countdowns_calendar WHERE id = ?")->execute([$id]);
+        echo json_encode(['success' => true]);
         exit;
     }
 
@@ -176,9 +192,7 @@ foreach ($items as $item) {
   .empty-text { font-size:0.85rem; letter-spacing:.06em; text-transform:uppercase; }
 
   /* FOOTER */
-  footer { padding:10px 12px 18px; border-top:none; display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; }
-  .search-btn { width:40px; height:40px; border-radius:50%; background:var(--surface2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-muted); font-size:0.95rem; transition:border-color .2s, color .2s; flex-shrink:0; }
-  .search-btn:hover { border-color:var(--accent); color:var(--accent); }
+
   .footer-tabs { display:flex; background:var(--surface2); border-radius:24px; padding:3px; gap:2px; flex:1; min-width:0; }
   .foot-tab { flex:1; padding:7px 6px; border-radius:20px; font-family:var(--sans); font-size:0.73rem; font-weight:700; color:var(--text-muted); background:none; border:none; cursor:pointer; transition:all .2s; white-space:nowrap; text-align:center; overflow:hidden; text-overflow:ellipsis; }
   .foot-tab.active { background:#fff; color:#0d0f14; }
@@ -261,6 +275,8 @@ foreach ($items as $item) {
   .field-box-input::placeholder { color:#3a3f54; font-weight:400; }
   .field-box-input[type="date"],
   .field-box-input[type="time"] { color-scheme:dark; font-family:var(--mono); font-size:0.85rem; font-weight:400; }
+  select.field-box-input { background:var(--surface2); color:var(--text); }
+  select.field-box-input option { background:var(--surface2); color:var(--text); }
 
   /* Two-column date+time row */
   .dt-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
@@ -333,7 +349,29 @@ foreach ($items as $item) {
   .view-close-btn { background:var(--surface2); color:var(--text-muted); border:1px solid var(--border); border-radius:10px; padding:13px 20px; font-family:var(--sans); font-size:0.85rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; transition:all .2s; }
   .view-close-btn:hover { border-color:var(--danger); color:var(--danger); }
 
-  /* TOAST */
+  /* FAB TRAY */
+  .fab-wrap { position:relative; flex-shrink:0; z-index:60; }
+  .fab-tray { position:absolute; bottom:52px; right:0; display:flex; flex-direction:column; gap:8px; align-items:flex-end; pointer-events:none; opacity:0; transform:translateY(10px); transition:opacity .2s, transform .2s; }
+  .fab-tray.open { opacity:1; transform:translateY(0); pointer-events:all; }
+  .fab-tray-item { display:flex; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--border); border-radius:24px; padding:9px 16px 9px 12px; cursor:pointer; white-space:nowrap; transition:background .15s, border-color .15s; }
+  .fab-tray-item:hover { background:#2a2f45; border-color:var(--accent); }
+  .fab-tray-icon { width:32px; height:32px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .fab-tray-icon i { color:#0d0f14; font-size:0.85rem; }
+  .fab-tray-label { font-family:var(--sans); font-size:0.82rem; font-weight:700; color:var(--text); letter-spacing:.04em; }
+  .add-btn.active { transform:rotate(45deg); }
+  #fabBackdrop { position:fixed; inset:0; z-index:50; display:none; }
+  #fabBackdrop.active { display:block; }
+
+  /* CALENDAR MODAL ROWS */
+  .cal-row { display:flex; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:11px 14px; }
+  .cal-row-label { flex:1; font-size:0.88rem; font-weight:600; color:var(--text); }
+  .cal-trash-btn { background:none; border:none; color:var(--text-muted); cursor:pointer; padding:4px 6px; border-radius:6px; font-size:0.9rem; transition:color .2s; }
+  .cal-trash-btn:hover { color:var(--danger); }
+  .cal-add-row { display:none; align-items:center; gap:8px; }
+
+  /* FOOTER — remove old search-btn ref */
+  footer { padding:10px 12px 18px; display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; border-top:none; }
+
   .toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 22px; font-size:0.82rem; font-weight:600; letter-spacing:.04em; z-index:300; transition:transform .3s cubic-bezier(.34,1.56,.64,1); white-space:nowrap; }
   .toast.show { transform:translateX(-50%) translateY(0); }
   .toast.success { border-color:var(--accent); color:var(--accent); }
@@ -344,8 +382,11 @@ foreach ($items as $item) {
 
 <header>
   <div class="menu-wrap">
-    <select class="menu-select" id="menuSelect">
-      <option value="">MENU</option>
+    <select class="menu-select" id="calendarFilter">
+      <option value="">ALL</option>
+      <?php foreach ($calendars as $cal): ?>
+      <option value="<?= $cal['id'] ?>"><?= htmlspecialchars($cal['label']) ?></option>
+      <?php endforeach; ?>
     </select>
     <span class="menu-arrow">▾</span>
   </div>
@@ -406,13 +447,28 @@ foreach ($items as $item) {
 </main>
 
 <footer>
-  <button class="search-btn" onclick="document.getElementById('searchInput')?.focus()" title="Search">🔍</button>
   <div class="footer-tabs">
     <button class="foot-tab" data-filter="past">Past <span id="pastBadge"><?= $pastCount ?></span></button>
     <button class="foot-tab active" data-filter="future">Future <span id="futureBadge"><?= $futureCount ?></span></button>
   </div>
-  <button class="add-btn" onclick="openAddModal()" title="Add Event">＋</button>
+  <!-- FAB tray -->
+  <div class="fab-wrap" id="fabWrap">
+    <div class="fab-tray" id="fabTray">
+      <button class="fab-tray-item" onclick="closeFab(); openCalendarModal()">
+        <span class="fab-tray-icon"><i class="fa-solid fa-calendar-alt"></i></span>
+        <span class="fab-tray-label">Calendar</span>
+      </button>
+      <button class="fab-tray-item" onclick="closeFab(); openAddModal()">
+        <span class="fab-tray-icon"><i class="fa-solid fa-stopwatch"></i></span>
+        <span class="fab-tray-label">Countdown</span>
+      </button>
+    </div>
+    <button class="add-btn" id="fabBtn" onclick="toggleFab()" title="Add">＋</button>
+  </div>
 </footer>
+
+<!-- FAB backdrop -->
+<div id="fabBackdrop" onclick="closeFab()"></div>
 
 <!-- ── VIEW MODAL ─────────────────────────────────────────────────────────────── -->
 <div class="overlay" id="viewOverlay" onclick="closeIfOutside(event,'viewOverlay')">
@@ -524,10 +580,23 @@ foreach ($items as $item) {
         <input class="field-box-input" type="text" id="fTitle" placeholder="Event name" autocomplete="off">
       </div>
 
-      <!-- Location -->
-      <div class="field-box">
-        <label class="field-box-label" for="fLocation">Location</label>
-        <input class="field-box-input" type="text" id="fLocation" placeholder="e.g. HOB Orlando" autocomplete="off">
+      <!-- Location + Calendar on same row -->
+      <div class="dt-row">
+        <div class="field-box">
+          <label class="field-box-label" for="fLocation">Location</label>
+          <input class="field-box-input" type="text" id="fLocation" placeholder="e.g. HOB Orlando" autocomplete="off">
+        </div>
+        <div class="field-box">
+          <label class="field-box-label" for="fCalendar">📅 Calendar</label>
+          <div class="menu-wrap" style="margin-top:2px;">
+            <select class="field-box-input" id="fCalendar" style="padding:0; font-size:0.9rem; font-weight:600; cursor:pointer; color-scheme:dark;">
+              <option value="">None</option>
+              <?php foreach ($calendars as $cal): ?>
+              <option value="<?= $cal['id'] ?>"><?= htmlspecialchars($cal['label']) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+        </div>
       </div>
 
       <!-- Start Date + Time -->
@@ -559,17 +628,6 @@ foreach ($items as $item) {
         </div>
       </div>
 
-      <!-- Calendar -->
-      <div class="field-box">
-        <label class="field-box-label" for="fCalendar">📅 Calendar</label>
-        <select class="field-box-input" id="fCalendar" style="cursor:pointer">
-          <option value="">None</option>
-          <?php foreach ($calendars as $cal): ?>
-          <option value="<?= $cal['id'] ?>"><?= htmlspecialchars($cal['name']) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-
       <!-- Guests -->
       <div class="field-box">
         <div class="field-box-label">👥 Guests</div>
@@ -597,6 +655,7 @@ foreach ($items as $item) {
 <script>
 // ── STATE ────────────────────────────────────────────────────────────────────
 let currentFilter = 'future';
+let currentCalendar = '';
 let items = <?= json_encode(array_values($items)) ?>;
 let editingId = null;
 let currentIcon  = 'fa-solid fa-calendar-days';
@@ -713,6 +772,12 @@ document.addEventListener('click', e => {
   }
 });
 
+// ── CALENDAR FILTER ──────────────────────────────────────────────────────────
+document.getElementById('calendarFilter').addEventListener('change', function() {
+  currentCalendar = this.value;
+  applyFilter();
+});
+
 // ── FILTER ───────────────────────────────────────────────────────────────────
 document.querySelectorAll('.filter-tab, .stat-btn, .foot-tab').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -736,12 +801,14 @@ function applyFilter() {
       const d = new Date(item.start_Date + 'T00:00:00');
       isFuture = d >= today;
     }
-    if (isFuture) futureN++; else pastN++;
-    const show = (currentFilter === 'future') ? isFuture : !isFuture;
-    c.style.display = show ? '' : 'none';
+    const passesCalendar = !currentCalendar || String(item?.Calendar) === String(currentCalendar);
+    if (passesCalendar) { if (isFuture) futureN++; else pastN++; }
+
+    const passesTab = (currentFilter === 'future') ? isFuture : !isFuture;
+    c.style.display = (passesTab && passesCalendar) ? '' : 'none';
   });
-  document.getElementById('futureBadge').textContent  = futureN;
-  document.getElementById('pastBadge').textContent    = pastN;
+  document.getElementById('futureBadge').textContent = futureN;
+  document.getElementById('pastBadge').textContent   = pastN;
 
   const empty = document.getElementById('emptyState');
   if (empty) {
@@ -1083,5 +1150,139 @@ function showToast(msg, type='success') {
 // Init filter
 applyFilter();
 </script>
+<!-- ── CALENDAR MODAL ─────────────────────────────────────────────────────────── -->
+<div class="overlay" id="calendarOverlay" onclick="closeIfOutside(event,'calendarOverlay')">
+  <div class="modal" style="max-height:75vh;">
+    <div class="modal-topbar">
+      <button class="modal-x" onclick="closeModal('calendarOverlay')">✕</button>
+      <span class="modal-topbar-title">Calendars</span>
+      <span style="width:40px"></span>
+    </div>
+    <div class="modal-body" id="calendarListWrap" style="gap:8px;padding-top:16px;">
+      <!-- populated by JS -->
+    </div>
+    <!-- Inline add form -->
+    <div style="padding:0 20px 20px;">
+      <div class="cal-add-row" id="calAddRow">
+        <input type="text" id="calNewName" class="guest-input" placeholder="Calendar name…" autocomplete="off" style="flex:1;"
+               onkeydown="if(event.key==='Enter') saveNewCalendar()">
+        <button class="add-btn" style="width:36px;height:36px;font-size:1.1rem;flex-shrink:0;" onclick="saveNewCalendar()" title="Save">✓</button>
+      </div>
+      <button class="add-guest-btn" id="showCalAddBtn" onclick="showCalAddForm()" style="margin-top:4px;">＋ Add Calendar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CALENDAR MODAL ────────────────────────────────────────────────────────────
+let calendars = <?= json_encode(array_values($calendars)) ?>;
+
+function openCalendarModal() {
+  renderCalendarList();
+  document.getElementById('calAddRow').style.display    = 'none';
+  document.getElementById('showCalAddBtn').style.display = '';
+  document.getElementById('calNewName').value = '';
+  document.getElementById('calendarOverlay').classList.add('open');
+}
+
+function renderCalendarList() {
+  const wrap = document.getElementById('calendarListWrap');
+  wrap.innerHTML = '';
+  if (!calendars.length) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'text-align:center;color:var(--text-muted);font-size:0.82rem;padding:20px 0;';
+    empty.textContent = 'No calendars yet';
+    wrap.appendChild(empty);
+    return;
+  }
+  calendars.forEach(cal => {
+    const row = document.createElement('div');
+    row.className = 'cal-row';
+    row.innerHTML = `
+      <span class="cal-row-label">${escHtml(cal.label)}</span>
+      <button class="cal-trash-btn" title="Delete" onclick="deleteCalendar(${cal.id}, this)">
+        <i class="fa-solid fa-trash"></i>
+      </button>
+    `;
+    wrap.appendChild(row);
+  });
+}
+
+function showCalAddForm() {
+  document.getElementById('calAddRow').style.display    = 'flex';
+  document.getElementById('showCalAddBtn').style.display = 'none';
+  setTimeout(() => document.getElementById('calNewName').focus(), 50);
+}
+
+function saveNewCalendar() {
+  const name = document.getElementById('calNewName').value.trim();
+  if (!name) { showToast('Enter a name', 'error'); return; }
+  const fd = new FormData();
+  fd.append('action', 'cal_add');
+  fd.append('label', name);
+  fetch('', { method:'POST', body:fd })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) { showToast(data.error, 'error'); return; }
+      calendars.push({ id: data.id, label: name });
+      renderCalendarList();
+      // Also add to the countdown form dropdown
+      const sel = document.getElementById('fCalendar');
+      const opt = document.createElement('option');
+      opt.value = data.id; opt.textContent = name;
+      sel.appendChild(opt);
+      // Also add to header filter dropdown
+      const hdr = document.getElementById('calendarFilter');
+      const hopt = document.createElement('option');
+      hopt.value = data.id; hopt.textContent = name;
+      hdr.appendChild(hopt);
+      document.getElementById('calAddRow').style.display    = 'none';
+      document.getElementById('showCalAddBtn').style.display = '';
+      document.getElementById('calNewName').value = '';
+      showToast('Calendar added ✓', 'success');
+    })
+    .catch(() => showToast('Network error', 'error'));
+}
+
+function deleteCalendar(id, btn) {
+  if (!confirm('Delete this calendar?')) return;
+  const fd = new FormData();
+  fd.append('action', 'cal_delete');
+  fd.append('id', id);
+  fetch('', { method:'POST', body:fd })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) { showToast('Error deleting', 'error'); return; }
+      calendars = calendars.filter(c => c.id != id);
+      renderCalendarList();
+      // Remove from form dropdown
+      document.querySelectorAll(`#fCalendar option[value="${id}"]`).forEach(o => o.remove());
+      // Remove from header filter
+      document.querySelectorAll(`#calendarFilter option[value="${id}"]`).forEach(o => o.remove());
+      showToast('Calendar deleted', 'success');
+    })
+    .catch(() => showToast('Network error', 'error'));
+}
+
+// ── FAB TRAY ──────────────────────────────────────────────────────────────────
+let fabOpen = false;
+
+function toggleFab() {
+  fabOpen ? closeFab() : openFab();
+}
+function openFab() {
+  fabOpen = true;
+  document.getElementById('fabTray').classList.add('open');
+  document.getElementById('fabBtn').classList.add('active');
+  document.getElementById('fabBackdrop').classList.add('active');
+}
+function closeFab() {
+  fabOpen = false;
+  document.getElementById('fabTray').classList.remove('open');
+  document.getElementById('fabBtn').classList.remove('active');
+  document.getElementById('fabBackdrop').classList.remove('active');
+}
+</script>
+
 </body>
 </html>
