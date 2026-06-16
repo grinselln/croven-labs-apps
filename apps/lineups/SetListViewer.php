@@ -306,23 +306,47 @@
 }
 .sl-band-prefs {
     display: flex;
-    flex-wrap: wrap;
     gap: 3px;
-    margin-top: 4px;
+    align-items: center;
+    flex-shrink: 0;
 }
-.sl-pref-pill {
+.sl-pref-dot {
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    padding: 2px 5px;
-    border-radius: 3px;
-    white-space: nowrap;
-    line-height: 1.4;
+    letter-spacing: 0;
+    line-height: 1;
+    flex-shrink: 0;
+    cursor: default;
+    position: relative;
 }
-.sl-pref-pill.want { background: rgba(105,240,174,0.18); color: #69f0ae; border: 1px solid rgba(105,240,174,0.4); }
-.sl-pref-pill.need { background: rgba(255,82,82,0.18);   color: #ff5252; border: 1px solid rgba(255,82,82,0.4); }
+.sl-pref-dot.want { background: rgba(105,240,174,0.15); color: #69f0ae; border: 1.5px solid rgba(105,240,174,0.6); }
+.sl-pref-dot.need { background: rgba(255,82,82,0.15);   color: #ff5252; border: 1.5px solid rgba(255,82,82,0.6); }
+.sl-pref-dot[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a2e;
+    color: #e8e8f0;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    padding: 3px 7px;
+    border-radius: 4px;
+    border: 1px solid #2a2a38;
+    pointer-events: none;
+    z-index: 100;
+    text-transform: uppercase;
+}
 .sl-band-card.dimmed { display: none; }
 
 /* ── Schedule star toggle ── */
@@ -628,13 +652,17 @@
                         </svg>
                     </button>`;
                     html += `<div class="sl-band-name">${esc(tx.performer || 'Unknown Artist')}</div>`;
-                    html += `<div class="sl-band-time"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${esc((tx.start_Time||'')+' – '+(tx.end_Time||''))}</div>`;
+                    let dotsHtml = '';
                     if (Object.keys(prefs).length) {
-                        html += `<div class="sl-band-prefs">`;
-                        for (const [viewer, type] of Object.entries(prefs))
-                            html += `<span class="sl-pref-pill ${esc(type)}">${esc(viewer)} ${esc(type[0].toUpperCase()+type.slice(1))}</span>`;
-                        html += `</div>`;
+                        dotsHtml = `<div class="sl-band-prefs">`;
+                        for (const [viewer, type] of Object.entries(prefs)) {
+                            const initials = viewer.trim().split(/\s+/).map(w => w[0].toUpperCase()).join('').slice(0, 2);
+                            const label = `${esc(viewer)} — ${esc(type)}`;
+                            dotsHtml += `<span class="sl-pref-dot ${esc(type)}" title="${label}">${esc(initials)}</span>`;
+                        }
+                        dotsHtml += `</div>`;
                     }
+                    html += `<div class="sl-band-time" style="display:flex;align-items:center;justify-content:space-between;gap:4px;"><span style="display:flex;align-items:center;gap:4px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${esc((tx.start_Time||'')+' – '+(tx.end_Time||''))}</span>${dotsHtml}</div>`;
                     if (tx.notes) html += `<div class="sl-band-meta">${esc(tx.notes)}</div>`;
                     card.innerHTML = html;
 
