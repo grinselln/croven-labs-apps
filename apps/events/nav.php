@@ -24,7 +24,6 @@ $navItems = [
     'schedule'  => ['label' => 'Schedule',  'href' => 'schedule.php',  'icon' => 'ti-calendar'],
     'new'       => ['label' => 'Add Event', 'href' => 'add_event.php', 'icon' => 'ti-plus'],
     'favorites' => ['label' => 'Favorites', 'href' => 'favorites.php', 'icon' => 'ti-star'],
-    'festivals' => ['label' => 'Festivals', 'href' => 'festivals.php', 'icon' => 'ti-flag'],
     'admin'     => ['label' => 'Admin',     'href' => 'admin.php',     'icon' => 'ti-shield'],
 ];
 
