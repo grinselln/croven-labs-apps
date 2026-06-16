@@ -166,8 +166,8 @@ try {
     $events = $pdo->query("SELECT id, event_Name, event_Year, event_StartDate, event_EndDate FROM lineups_list ORDER BY event_StartDate")->fetchAll();
 } catch (Exception $e) { /* handled in view */ }
 
-$currentPage        = 'festivals';
-$pageTitle          = 'Festivals';
+$currentPage        = 'lineups';
+$pageTitle          = 'Lineups';
 ?>
 <!DOCTYPE html>
 <html lang="en">
