@@ -19,8 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         exit;
     }
 
-    // Find the logic
-    $stmt = $pdo->prepare("SELECT * FROM lineups_import_logic WHERE festival_id = ?");
+    $stmt = $pdo->prepare("SELECT * FROM vw_lineups_festival_config WHERE festival_id = ?");
     $stmt->execute([$festival_id]);
     $logic_row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -94,63 +93,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         exit;
     }
 
-    $rows = json_decode($rows_json, true);
-    if (!$rows) {
+    if (!json_decode($rows_json, true)) {
         echo json_encode(['success' => false, 'message' => 'Could not decode row data.']);
         exit;
     }
 
     try {
-        $pdo->beginTransaction();
+        $stmt = $pdo->prepare(
+            "CALL sp_lineups_import_commit(:fid, :rows, @trans_count, @pref_count)"
+        );
+        $stmt->execute([':fid' => $festival_id, ':rows' => $rows_json]);
+        $stmt->closeCursor();
 
-        // Delete existing data for this festival
-        $pdo->prepare("DELETE FROM lineups_preferences WHERE festival_ID = ?")->execute([$festival_id]);
-        $pdo->prepare("DELETE FROM lineups_transactions WHERE festival_ID = ?")->execute([$festival_id]);
+        $out = $pdo->query("SELECT @trans_count AS trans_count, @pref_count AS pref_count")->fetch();
 
-        $trans_stmt = $pdo->prepare("
-            INSERT INTO lineups_transactions (festival_ID, day, stage, performer, start_Time, end_Time)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ");
-
-        $pref_stmt = $pdo->prepare("
-            INSERT INTO lineups_preferences (festival_ID, trans_ID, viewer, want, need)
-            VALUES (?, ?, ?, ?, ?)
-        ");
-
-        foreach ($rows as $row) {
-            $trans_stmt->execute([
-                $festival_id,
-                $row['day'],
-                $row['stage'],
-                $row['performer'],
-                $row['start_Time'],
-                $row['end_Time']
-            ]);
-            $trans_id = $pdo->lastInsertId();
-
-            foreach ($row['preferences'] as $pref) {
-                $pref_stmt->execute([
-                    $festival_id,
-                    $trans_id,
-                    $pref['viewer'],
-                    $pref['want'],
-                    $pref['need']
-                ]);
-            }
-        }
-
-        $pdo->commit();
-
-        $pref_count = array_sum(array_map(fn($r) => count($r['preferences']), $rows));
         echo json_encode([
-            'success'      => true,
-            'message'      => 'Import complete.',
-            'trans_count'  => count($rows),
-            'pref_count'   => $pref_count
+            'success'     => true,
+            'message'     => 'Import complete.',
+            'trans_count' => (int)$out['trans_count'],
+            'pref_count'  => (int)$out['pref_count'],
         ]);
 
     } catch (Exception $e) {
-        $pdo->rollBack();
         echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
     }
     exit;
@@ -189,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         exit;
     }
 
-    $stmt = $pdo->prepare("SELECT * FROM lineups_import_logic WHERE festival_id = ?");
+    $stmt = $pdo->prepare("SELECT * FROM vw_lineups_festival_config WHERE festival_id = ?");
     $stmt->execute([$festival_id]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -290,23 +254,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $stage_format = json_encode($data['stage_format'] ?? []);
 
     try {
-        // Upsert: update if exists, insert if not
-        $stmt = $pdo->prepare("SELECT id FROM lineups_import_logic WHERE festival_id = ?");
-        $stmt->execute([$festival_id]);
-        $existing = $stmt->fetchColumn();
-
-        if ($existing) {
-            $pdo->prepare("
-                UPDATE lineups_import_logic
-                SET column_map = ?, valid_days = ?, valid_stages = ?, attendees = ?, stage_format = ?
-                WHERE festival_id = ?
-            ")->execute([$column_map, $valid_days, $valid_stages, $attendees, $stage_format, $festival_id]);
-        } else {
-            $pdo->prepare("
-                INSERT INTO lineups_import_logic (festival_id, column_map, valid_days, valid_stages, attendees, stage_format)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ")->execute([$festival_id, $column_map, $valid_days, $valid_stages, $attendees, $stage_format]);
-        }
+        $stmt = $pdo->prepare(
+            "CALL sp_lineups_save_import_logic(?, ?, ?, ?, ?, ?)"
+        );
+        $stmt->execute([
+            $festival_id,
+            $column_map,
+            $valid_days,
+            $valid_stages,
+            $attendees,
+            $stage_format,
+        ]);
 
         echo json_encode(['success' => true]);
     } catch (Exception $e) {

@@ -20,11 +20,6 @@ function json_error(string $msg, int $code = 400): never {
     echo json_encode(['success' => false, 'error' => $msg]);
     exit;
 }
-
-// ═════════════════════════════════════════════════════════════════════════════
-// POST  action=set_schedule
-//   Body: festival_id (int), trans_id (int), schedule (0|1)
-// ═════════════════════════════════════════════════════════════════════════════
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'set_schedule') {
     $festId  = isset($_POST['festival_id']) ? (int)$_POST['festival_id'] : 0;
     $transId = isset($_POST['trans_id'])    ? (int)$_POST['trans_id']    : 0;
@@ -35,22 +30,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'set_schedule') {
     if ($value === null)      json_error('schedule value (0 or 1) is required.');
 
     try {
-        // Verify the transaction belongs to this festival (security check)
-        $chk = $pdo->prepare(
-            "SELECT ID FROM lineups_transactions WHERE ID = :tid AND festival_ID = :fid LIMIT 1"
-        );
-        $chk->execute([':tid' => $transId, ':fid' => $festId]);
-        if (!$chk->fetch()) {
+        $stmt = $pdo->prepare("CALL sp_lineups_set_schedule(:fid, :tid, :val)");
+        $stmt->execute([':fid' => $festId, ':tid' => $transId, ':val' => $value]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt->closeCursor();
+
+        echo json_encode([
+            'success'  => true,
+            'trans_id' => (int)$result['trans_id'],
+            'schedule' => (int)$result['schedule'],
+        ]);
+    } catch (PDOException $e) {
+        if ($e->getCode() === '45000') {
             json_error('Transaction not found for this festival.', 404);
         }
-
-        $stmt = $pdo->prepare(
-            "UPDATE lineups_transactions SET `schedule` = :val WHERE ID = :tid AND festival_ID = :fid"
-        );
-        $stmt->execute([':val' => $value, ':tid' => $transId, ':fid' => $festId]);
-
-        echo json_encode(['success' => true, 'trans_id' => $transId, 'schedule' => $value]);
-    } catch (PDOException $e) {
         json_error('Database error: ' . $e->getMessage(), 500);
     }
     exit;
@@ -64,13 +57,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'lockscreen_data') {
     if (!$fid) json_error('festival_id is required.');
 
     try {
-        // Pull config columns from lineups_import_logic
+        // in index.php's setlist_data.
         $stmt = $pdo->prepare(
-            "SELECT il.valid_days, il.stage_colors, il.dayAccents,
-                    CONCAT(e.event_Year, ' ', e.event_Name) AS festival_name
-               FROM lineups_import_logic il
-               JOIN lineups_list e ON il.festival_id = e.id
-              WHERE il.festival_id = :fid LIMIT 1"
+            "SELECT valid_days, stage_colors, dayAccents, festival_name
+               FROM vw_lineups_festival_config
+              WHERE festival_id = :fid LIMIT 1"
         );
         $stmt->execute([':fid' => $fid]);
         $logic = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -87,27 +78,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'lockscreen_data') {
         // Normalise day names
         $days = array_map('ucfirst', array_map('strtolower', $validDays));
 
-        // Pull schedule=1 transactions for this festival, ordered by day then time
-        // Build a dynamic FIELD() for the festival's actual day list (falls back to alpha)
-        if (!empty($days)) {
-            $placeholders = implode(',', array_fill(0, count($days), '?'));
-            $fieldArgs    = array_merge([$fid], $days);
-            $sql = "SELECT ID, performer, performer, day, stage, start_time, end_time
-                      FROM lineups_transactions
-                     WHERE festival_ID = ?
-                       AND `schedule` = 1
-                     ORDER BY FIELD(day, {$placeholders}), start_time ASC";
-            $stmt2 = $pdo->prepare($sql);
-            $stmt2->execute($fieldArgs);
-        } else {
-            $stmt2 = $pdo->prepare(
-                "SELECT ID, performer, performer, day, stage, start_time, end_time
-                   FROM lineups_transactions
-                  WHERE festival_ID = ? AND `schedule` = 1
-                  ORDER BY day ASC, start_time ASC"
-            );
-            $stmt2->execute([$fid]);
-        }
+        $stmt2 = $pdo->prepare(
+            "SELECT ID, performer, day, stage,
+                    start_Time AS start_time, end_Time AS end_time
+               FROM vw_lineups_transactions_detail
+              WHERE festival_ID = ? AND `schedule` = 1
+              ORDER BY day_ord, start_minutes"
+        );
+        $stmt2->execute([$fid]);
         $transactions = $stmt2->fetchAll(PDO::FETCH_ASSOC);
 
         // Group by day
@@ -118,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'lockscreen_data') {
             if (array_key_exists($txDay, $schedule)) {
                 $schedule[$txDay][] = [
                     'ID'         => (int)$tx['ID'],
-                    'performer'  => $tx['performer']  ?? $tx['performer'] ?? '',
+                    'performer'  => $tx['performer']  ?? '',
                     'stage'      => $tx['stage']       ?? '',
                     'start_time' => $tx['start_time']  ?? '',
                     'end_time'   => $tx['end_time']    ?? '',
