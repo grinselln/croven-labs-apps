@@ -28,7 +28,7 @@ define('ONEDRIVE_REFRESH_TOKEN',    getenv('ONEDRIVE_REFRESH_TOKEN'));
 
 // ─── Connect ────────────────────────────────────────────────────────
 try {
-    $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
+    $dsn = "mysql:host=" . DB_HOST . ";port=" . (getenv('DB_PORT') ?: 3306) . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
     $pdo = new PDO($dsn, DB_USER, DB_PASS, [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
