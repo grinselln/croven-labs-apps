@@ -3,7 +3,10 @@
 // NOTE: this file depends on these DB objects existing already:
 //   views:      vw_countdowns_items, vw_countdowns_counts, vw_countdowns_calendar_usage
 //   procedures: sp_countdowns_add_item, sp_countdowns_delete_calendar
-require_once 'db/db_hosted.php';
+
+require_once dirname(__DIR__, 2) . '/config/bootstrap.php';
+
+
 // $pdo is provided by db_hosted.php
 
 // ─── LOAD ICONS FROM DB ───────────────────────────────────────────────────────
