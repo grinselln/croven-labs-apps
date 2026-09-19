@@ -13,18 +13,16 @@ jobs:
       - name: Install sshpass
         run: sudo apt-get update && sudo apt-get install -y sshpass
 
-      - name: Test SSH connection
+      - name: Deploy via SSH (tar)
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
-          sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh -p ${{ secrets.SSH_PORT }} \
+          tar czf - \
+            --exclude='./.git' \
+            --exclude='./.github' \
+            --exclude='./node_modules' \
+            . | \
+          sshpass -e ssh -p ${{ secrets.SSH_PORT }} \
             -o StrictHostKeyChecking=no \
-            "${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}" "echo connected && which rsync"
-            
-      - name: Deploy via SSH (rsync + password)
-        run: |
-          sshpass -p "${{ secrets.SSH_PASSWORD }}" rsync -avzr --delete \
-            -e "ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no" \
-            --exclude='.git*' \
-            --exclude='.git*/**' \
-            --exclude='node_modules/**' \
-            --exclude='.github/**' \
-            ./ "${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_TARGET_DIR }}"
+            "${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}" \
+            "mkdir -p ${{ secrets.SSH_TARGET_DIR }} && tar xzf - -C ${{ secrets.SSH_TARGET_DIR }}"
