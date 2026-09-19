@@ -59,14 +59,31 @@ switch ($method) {
             'Calendar'   => $b['calendar'] ? (int) $b['calendar'] : null,
             'Guests'     => trim($b['guests'] ?? ''),
             'Notes'      => trim($b['notes'] ?? ''),
+            'pto_needed'   => trim($b['pto_needed'] ?? '') ?: null,
+            'pto_approved' => trim($b['pto_approved'] ?? '') ?: null,
+            'ticket_type'  => trim($b['ticket_type'] ?? '') ?: null,
+            'seated'       => trim($b['seated'] ?? '') ?: null,
         ];
 
+        // NOTE: sp_countdowns_add_item currently accepts the original 11 params.
+        // The 4 new fields are set via a follow-up UPDATE after insert until the
+        // stored procedure itself is updated to accept them.
+        $origFields = array_slice($fields, 0, 11);
         $stmt = $pdo->prepare('CALL sp_countdowns_add_item(?,?,?,?,?,?,?,?,?,?,?)');
-        $stmt->execute(array_values($fields));
+        $stmt->execute(array_values($origFields));
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         $stmt->closeCursor(); // release the proc's result set before further queries
 
         $fields['id'] = (int) ($row['id'] ?? 0);
+
+        $upd = $pdo->prepare(
+            'UPDATE countdowns_items SET pto_needed=?, pto_approved=?, ticket_type=?, seated=? WHERE id=?'
+        );
+        $upd->execute([
+            $fields['pto_needed'], $fields['pto_approved'],
+            $fields['ticket_type'], $fields['seated'], $fields['id'],
+        ]);
+
         json_response($fields, 201);
         break;
 
@@ -80,7 +97,8 @@ switch ($method) {
         $stmt = $pdo->prepare(
             'UPDATE countdowns_items SET
                 title=?, location=?, icon=?, color=?, start_Date=?, start_Time=?,
-                end_Date=?, end_Time=?, Calendar=?, Guests=?, Notes=?
+                end_Date=?, end_Time=?, Calendar=?, Guests=?, Notes=?,
+                pto_needed=?, pto_approved=?, ticket_type=?, seated=?
              WHERE id=?'
         );
         $stmt->execute([
@@ -95,6 +113,10 @@ switch ($method) {
             $b['calendar'] ? (int) $b['calendar'] : null,
             trim($b['guests'] ?? ''),
             trim($b['notes'] ?? ''),
+            trim($b['pto_needed'] ?? '') ?: null,
+            trim($b['pto_approved'] ?? '') ?: null,
+            trim($b['ticket_type'] ?? '') ?: null,
+            trim($b['seated'] ?? '') ?: null,
             $id,
         ]);
         json_response(['updated' => true]);

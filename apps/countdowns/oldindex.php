@@ -59,11 +59,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($action === 'add') {
-            $stmt = $pdo->prepare("CALL sp_countdowns_add_item(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-            $stmt->execute(array_values($fields));
+            // NOTE: sp_countdowns_add_item currently accepts the original 11 params.
+            // The 4 new fields are set via a follow-up UPDATE after insert until the
+            // stored procedure itself is updated to accept them.
+            $origFields = array_slice($fields, 0, 11);
+            $stmt = $pdo->prepare("CALL sp_countdowns_add_item(?,?,?,?,?,?,?,?,?,?,?)");
+            $stmt->execute(array_values($origFields));
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             $stmt->closeCursor(); // release the proc's result set before further queries
             $fields['id'] = (int)($row['id'] ?? 0);
+
+            $upd = $pdo->prepare("UPDATE countdowns_items SET
+                pto_needed=?, pto_approved=?, ticket_type=?, seated=? WHERE id=?");
+            $upd->execute([
+                $fields['pto_needed'], $fields['pto_approved'],
+                $fields['ticket_type'], $fields['seated'], $fields['id'],
+            ]);
         } else {
             $id = (int)($_POST['id'] ?? 0);
             $stmt = $pdo->prepare("UPDATE countdowns_items SET
@@ -345,7 +356,8 @@ try {
             <div class="view-row-value" id="vPtoApproved">—</div>
           </div>
         </div>
-   </div>
+      </div>
+
     </div>
 
     <div class="view-footer">
@@ -791,12 +803,12 @@ function openViewModal(item) {
     vGuests.className   = 'view-row-value';
   } else {
     vGuests.textContent = 'None';
-    vGuests.className   = 'view-row-value is-empty';
+    vGuests.className   = 'view-row-value empty';
   }
 
   const vNotes = document.getElementById('vNotes');
   vNotes.textContent = notes || 'None';
-  vNotes.className   = 'view-row-value' + (notes ? '' : ' is-empty');
+  vNotes.className   = 'view-row-value' + (notes ? '' : ' empty');
 
   setViewField('vTicketType',  item.ticket_type);
   setViewField('vSeated',      item.seated);
@@ -809,7 +821,7 @@ function openViewModal(item) {
 function setViewField(id, value) {
   const el = document.getElementById(id);
   el.textContent = value || '—';
-  el.className   = 'view-row-value' + (value ? '' : ' is-empty');
+  el.className   = 'view-row-value' + (value ? '' : ' empty');
 }
 
 function switchToEdit() {
