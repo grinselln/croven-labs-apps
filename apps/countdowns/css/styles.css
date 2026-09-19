@@ -261,7 +261,7 @@ input[type="date"].pill-input, input[type="time"].pill-input { appearance: none;
 .view-location { font-size: 0.82rem; color: var(--text-muted); font-family: var(--mono); margin-top: 4px; }
 
 .view-body  { display: flex; flex-direction: column; gap: 10px; padding: 0 20px 20px; }
-.view-block { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.view-block { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;}
 .view-row   { display: flex; align-items: flex-start; gap: 12px; padding: 13px 16px; }
 .view-row + .view-row { border-top: 1px solid var(--border); }
 .view-row-icon    { font-size: 1rem; min-width: 22px; line-height: 1.4; }
