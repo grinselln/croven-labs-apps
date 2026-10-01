@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         'column_map'   => build_column_map(json_decode($logic_row['column_map'], true)),
         'valid_days'   => json_decode($logic_row['valid_days'], true),
         'valid_stages' => json_decode($logic_row['valid_stages'], true),
+        'complete'     => isset($logic_row['complete']) ? (int)$logic_row['complete'] : 0,
     ];
     if (!$logic) {
         echo json_encode(['success' => false, 'errors' => ['Could not parse logic file.']]);
@@ -55,6 +56,91 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $result = parse_spreadsheet($tmp, $logic);
 
     echo json_encode($result);
+    exit;
+}
+
+// ─────────────────────────────────────────────
+// AJAX: Preview from DB endpoint (read-only view of already-imported data)
+// ─────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'preview_db') {
+    header('Content-Type: application/json');
+
+    $festival_id = $_POST['festival_id'] ?? '';
+
+    if (!$festival_id) {
+        echo json_encode(['success' => false, 'errors' => ['No festival selected.']]);
+        exit;
+    }
+
+    $stmt = $pdo->prepare(
+        "SELECT * FROM vw_Lineups_transactions_detail_prefs WHERE festival_ID = ? ORDER BY day_ord, start_minutes"
+    );
+    $stmt->execute([$festival_id]);
+    $db_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Viewer columns come from the festival's Import Specs "attendees" list,
+    // not from auto-detecting extra columns in the view. Only attendees that
+    // also have a matching column in the view are shown (silently skipped
+    // otherwise).
+    $config_stmt = $pdo->prepare("SELECT attendees FROM vw_lineups_festival_config WHERE festival_id = ?");
+    $config_stmt->execute([$festival_id]);
+    $attendees = json_decode($config_stmt->fetchColumn() ?: '[]', true) ?: [];
+
+    $available_cols = !empty($db_rows) ? array_keys($db_rows[0]) : [];
+
+    // Case-insensitive, whitespace-tolerant match: build a lookup of
+    // normalized available column name -> actual column name, then only
+    // keep attendees whose normalized form matches an available column.
+    $normalize = fn($s) => strtolower(trim((string)$s));
+    $available_lookup = [];
+    foreach ($available_cols as $col) {
+        $available_lookup[$normalize($col)] = $col;
+    }
+
+    $viewer_cols = [];
+    foreach ($attendees as $attendee) {
+        $key = $normalize($attendee);
+        if (isset($available_lookup[$key])) {
+            $viewer_cols[] = $available_lookup[$key];
+        }
+    }
+
+    $rows_out = array_map(function ($row) use ($viewer_cols) {
+        $prefs = [];
+        foreach ($viewer_cols as $viewer_name) {
+            $val = strtoupper(trim($row[$viewer_name] ?? ''));
+            if ($val === '') continue;
+
+            $prefs[] = [
+                'viewer' => $viewer_name,
+                'want'   => ($val === 'W') ? 1 : 0,
+                'need'   => ($val === 'N') ? 1 : 0,
+            ];
+        }
+
+        return [
+            'row_num'     => (int)$row['ID'],
+            'day'         => $row['day']         ?? '',
+            'start_Time'  => $row['start_Time']  ?? '',
+            'end_Time'    => $row['end_Time']    ?? '',
+            'performer'   => $row['performer']   ?? '',
+            'stage'       => $row['stage']       ?? '',
+            'preferences' => $prefs,
+            'has_error'   => false,
+            'row_errors'  => [],
+        ];
+    }, $db_rows);
+
+    $pref_count = array_sum(array_map(fn($r) => count($r['preferences']), $rows_out));
+
+    echo json_encode([
+        'success'      => true,
+        'errors'       => [],
+        'rows'         => $rows_out,
+        'trans_count'  => count($rows_out),
+        'pref_count'   => $pref_count,
+        'viewer_names' => $viewer_cols,
+    ]);
     exit;
 }
 
@@ -166,6 +252,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             'valid_stages' => json_decode($row['valid_stages'], true) ?: [],
             'attendees'    => json_decode($row['attendees'],    true) ?: [],
             'stage_format' => json_decode($row['stage_format'], true) ?: (object)[],
+            'complete'     => isset($row['complete']) ? (int)$row['complete'] : 0,
         ]);
         exit;
     }
@@ -252,10 +339,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $valid_stages = json_encode($data['valid_stages'] ?? []);
     $attendees    = json_encode($data['attendees']    ?? []);
     $stage_format = json_encode($data['stage_format'] ?? []);
+    $complete     = !empty($data['complete']) ? 1 : 0;
 
     try {
         $stmt = $pdo->prepare(
-            "CALL sp_lineups_save_import_logic(?, ?, ?, ?, ?, ?)"
+            "CALL sp_lineups_save_import_logic(?, ?, ?, ?, ?, ?, ?)"
         );
         $stmt->execute([
             $festival_id,
@@ -264,6 +352,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $valid_stages,
             $attendees,
             $stage_format,
+            $complete,
         ]);
 
         echo json_encode(['success' => true]);
@@ -381,27 +470,55 @@ function parse_spreadsheet($tmp_path, $logic) {
     $valid_days   = $logic['valid_days'];
     $valid_stages = $logic['valid_stages'];
     $valid_prefs  = ['n','w'];
+    $is_complete  = !empty($logic['complete']);
+
+    // Which of the five core fields are actually mapped in this logic config.
+    // Partial uploads are expected to be missing some of these entirely — in
+    // that case we simply don't validate that field at all (there's nothing
+    // to check). We only validate a field if a column is actually mapped to it.
+    $core_fields = ['day', 'start_Time', 'end_Time', 'performer', 'stage'];
+    $mapped_core = [];
+    foreach ($core_fields as $f) {
+        $mapped_core[$f] = ($get_col($f) !== null);
+    }
+
+    // In Complete mode, a totally-missing core field is a config-level problem
+    // (not a per-row one) — surface it once instead of spamming an error per row.
+    if ($is_complete) {
+        foreach ($core_fields as $f) {
+            if (!$mapped_core[$f]) {
+                $errors[] = "This festival's logic is marked Complete, but no column is mapped to '{$f}'.";
+            }
+        }
+    }
 
     foreach ($raw_rows as $row) {
         $row_errors = [];
 
-        $day       = trim($row[$get_col('day')]        ?? '');
-        $start     = trim($row[$get_col('start_Time')] ?? '');
-        $end       = trim($row[$get_col('end_Time')]   ?? '');
-        $performer = trim($row[$get_col('performer')]  ?? '');
-        $stage     = trim($row[$get_col('stage')]      ?? '');
+        $day       = $mapped_core['day']        ? trim($row[$get_col('day')]        ?? '') : null;
+        $start     = $mapped_core['start_Time'] ? trim($row[$get_col('start_Time')] ?? '') : null;
+        $end       = $mapped_core['end_Time']   ? trim($row[$get_col('end_Time')]   ?? '') : null;
+        $performer = $mapped_core['performer']  ? trim($row[$get_col('performer')]  ?? '') : null;
+        $stage     = $mapped_core['stage']      ? trim($row[$get_col('stage')]      ?? '') : null;
 
-        if ($day === '')       $row_errors[] = "Row {$row_num}: Day is empty.";
-        if ($start === '')     $row_errors[] = "Row {$row_num}: Start time is empty.";
-        if ($end === '')       $row_errors[] = "Row {$row_num}: End time is empty.";
-        if ($performer === '') $row_errors[] = "Row {$row_num}: Performer/Band is empty.";
-        if ($stage === '')     $row_errors[] = "Row {$row_num}: Stage is empty.";
+        // Empty-field checks only apply in Complete mode. A Partial upload is
+        // expected to have blank cells for fields it doesn't have data for yet
+        // — that's not an error, it's the whole point of Partial mode. Value
+        // validation below (valid day/stage) still runs whenever a value IS
+        // present, in both modes.
+        if ($is_complete) {
+            if ($mapped_core['day']        && $day === '')       $row_errors[] = "Row {$row_num}: Day is empty.";
+            if ($mapped_core['start_Time'] && $start === '')     $row_errors[] = "Row {$row_num}: Start time is empty.";
+            if ($mapped_core['end_Time']   && $end === '')       $row_errors[] = "Row {$row_num}: End time is empty.";
+            if ($mapped_core['performer']  && $performer === '') $row_errors[] = "Row {$row_num}: Performer/Band is empty.";
+            if ($mapped_core['stage']      && $stage === '')     $row_errors[] = "Row {$row_num}: Stage is empty.";
+        }
 
-        if ($day !== '' && !in_array(strtolower($day), array_map('strtolower', $valid_days))) {
+        if ($mapped_core['day'] && $day !== '' && !in_array(strtolower($day), array_map('strtolower', $valid_days ?: []))) {
             $row_errors[] = "Row {$row_num}: Invalid day value '{$day}'.";
         }
 
-        if ($stage !== '' && !in_array(strtolower($stage), array_map('strtolower', $valid_stages))) {
+        if ($mapped_core['stage'] && $stage !== '' && !in_array(strtolower($stage), array_map('strtolower', $valid_stages ?: []))) {
             $row_errors[] = "Row {$row_num}: Invalid stage value '{$stage}'.";
         }
 
@@ -427,11 +544,11 @@ function parse_spreadsheet($tmp_path, $logic) {
 
         $rows_out[] = [
             'row_num'     => $row_num,
-            'day'         => $day,
-            'start_Time'  => $start,
-            'end_Time'    => $end,
-            'performer'   => $performer,
-            'stage'       => $stage,
+            'day'         => $day ?? '',
+            'start_Time'  => $start ?? '',
+            'end_Time'    => $end ?? '',
+            'performer'   => $performer ?? '',
+            'stage'       => $stage ?? '',
             'preferences' => $prefs,
             'has_error'   => !empty($row_errors),
             'row_errors'  => $row_errors,
@@ -449,6 +566,8 @@ function parse_spreadsheet($tmp_path, $logic) {
         'trans_count'  => count($rows_out),
         'pref_count'   => $pref_count,
         'viewer_names' => array_values($viewer_col_indexes),
+        'complete'     => $is_complete ? 1 : 0,
+        'mapped_core'  => $mapped_core,
     ];
 }
 
