@@ -1,5 +1,6 @@
 # ─── Never commit server environment config ──────────────────────────
 .htaccess
+apps/lineups/import/
 db_credentials.php
 get_folder_id.php
 get_refresh_token.php
