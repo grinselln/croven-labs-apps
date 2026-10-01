@@ -1,6 +1,6 @@
 <?php
 // ─── festivals.php ────────────────────────────────────────────────────
-require_once 'db/db_hosted.php';
+require_once dirname(__DIR__, 2) . '/config/bootstrap.php';
 require_once 'imports_logic.php';
 
 // ─── Handle save (AJAX POST) ──────────────────────────────────────────
@@ -149,7 +149,7 @@ $pageTitle          = 'Lineups';
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Festivals — Croven Events</title>
+  <title>Lineups</title>
   <link rel="stylesheet" href="css/styles.css">
 
 </head>
@@ -191,6 +191,7 @@ $pageTitle          = 'Lineups';
   <div class="tab-bar" role="tablist">
     <button class="tab-btn active"   role="tab" data-tab="list"    aria-selected="true">Festival List</button>
     <button class="tab-btn tab-gated" role="tab" data-tab="imports" aria-selected="false" disabled title="Select a festival first">Import</button>
+    <button class="tab-btn tab-gated" role="tab" data-tab="imports2" aria-selected="false" disabled title="Select a festival first">Import2</button>
     <button class="tab-btn tab-gated" role="tab" data-tab="setlist" aria-selected="false" disabled title="Select a festival first">Set List</button>
     <button class="tab-btn" role="tab" data-tab="lockscreen" aria-selected="false">Lockscreen</button>
   </div>
@@ -245,6 +246,11 @@ $pageTitle          = 'Lineups';
   <!-- ── Tab 2: Imports ── -->
   <div class="tab-panel" id="panel-imports" role="tabpanel">
     <?php include 'imports_partial.php'; ?>
+  </div>
+
+    <!-- ── Tab 2.5: Imports ── -->
+  <div class="tab-panel" id="panel-imports2" role="tabpanel">
+    <?php include 'lineup_imports.php'; ?>
   </div>
 
   <!-- ── Tab 3: Set List ── -->
