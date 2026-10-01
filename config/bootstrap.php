@@ -1,5 +1,6 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) {
+    session_save_path('/home/ngrinsell/tmp/sessions');
     session_start();
 }
 
@@ -14,8 +15,3 @@ if (!file_exists(DB_HOSTED_FILE)) {
     die("Configuration error: credentials file not found at expected path.");
 }
 require_once DB_HOSTED_FILE;
-
-
-
-
-
