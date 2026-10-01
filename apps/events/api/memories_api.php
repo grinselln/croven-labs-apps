@@ -8,7 +8,7 @@
  *                      → updates the memories table, returns { success, memory }
  */
 
-require_once '../db/db_hosted.php';
+require_once dirname(__DIR__, 3) . '/config/bootstrap.php';
 require_once '../api/auth.php';
 
 header('Content-Type: application/json');

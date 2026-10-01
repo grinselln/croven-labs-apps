@@ -1,6 +1,6 @@
 <?php
 // ─── login.php ────────────────────────────────────────────────────────
-require_once 'db/db_hosted.php';
+require_once dirname(__DIR__, 2) . '/config/bootstrap.php';
 
 // Already logged in → go home
 if (!empty($_SESSION['auth_user_id'])) {

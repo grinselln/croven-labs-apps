@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../db/db_hosted.php';
+require_once dirname(__DIR__, 3) . '/config/bootstrap.php';
 require_once __DIR__ . '/auth.php';
 
 header('Content-Type: application/json');

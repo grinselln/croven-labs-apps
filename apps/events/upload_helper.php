@@ -10,7 +10,7 @@
 
 
 
-require_once 'db/db_hosted.php';
+require_once dirname(__DIR__, 2) . '/config/bootstrap.php';
 // -------------------------------------------------------
 // Configuration — replace these with your actual values
 // -------------------------------------------------------

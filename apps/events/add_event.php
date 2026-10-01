@@ -1,5 +1,7 @@
 <?php
-require_once 'db/db_hosted.php';
+$dbhosted_file = dirname(dirname(__DIR__)) . '/db/db_hosted.php';
+
+require_once dirname(__DIR__, 2) . '/config/bootstrap.php';
 require_once 'api/auth.php';
 
 // ─── Fetch all venues for the dropdown ──────────────────────────────

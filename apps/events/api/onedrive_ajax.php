@@ -10,7 +10,7 @@ session_start();
 
 define('DEV_MODE', true); // TODO: remove before production
 
-require_once dirname(__DIR__) . '/db/db_hosted.php';   // was missing /db/
+require_once dirname(__DIR__, 3) . '/config/bootstrap.php';
 require_once dirname(__DIR__) . '/onedrive_helper.php'; // was __DIR__ (wrong folder)
 
 header('Content-Type: application/json');
