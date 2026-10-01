@@ -1,5 +1,5 @@
 <?php
-require_once 'db/db_hosted.php';
+require_once dirname(__DIR__, 2) . '/config/bootstrap.php';
 require_once 'api/auth.php';
 
 // ─── View mode: 'mine' (default) or 'all' ───────────────────────────

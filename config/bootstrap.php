@@ -1,4 +1,8 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 if (!defined('APP_ROOT')) {
     // bootstrap.php lives in /config, so APP_ROOT is one level up
     define('APP_ROOT', dirname(__DIR__));
