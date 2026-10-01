@@ -25,17 +25,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $stmt->fetch();
 
             if ($user && password_verify($password, $user['password_hash'])) {
+
+                // ── DEBUG: snapshot session state before regenerate ──────
+                error_log('[LOGIN] before regen — session_id=' . session_id()
+                    . ' status=' . session_status()
+                    . ' save_path=' . session_save_path()
+                    . ' save_path_writable=' . var_export(is_writable(session_save_path()), true));
+
                 // Regenerate session ID on login to prevent fixation
-                session_regenerate_id(true);
+                $regenOk = session_regenerate_id(true);
+
+                // ── DEBUG: confirm regenerate result + new id ────────────
+                error_log('[LOGIN] regen returned=' . var_export($regenOk, true)
+                    . ' new_session_id=' . session_id());
+
                 $_SESSION['auth_user_id']   = $user['id'];
                 $_SESSION['auth_user_name'] = $user['name'];
                 $_SESSION['nav_user']       = $user['name'];
+
+                // ── DEBUG: confirm $_SESSION actually holds the data ─────
+                error_log('[LOGIN] session after write: ' . print_r($_SESSION, true));
 
                 $dest = filter_var($redirect, FILTER_SANITIZE_URL);
                 // Only allow relative redirects
                 if (!$dest || strpos($dest, '//') !== false || strpos($dest, 'http') === 0) {
                     $dest = 'index.php';
                 }
+
+                // ── DEBUG: confirm headers haven't already been sent ─────
+                if (headers_sent($hsFile, $hsLine)) {
+                    error_log("[LOGIN] WARNING: headers already sent before redirect, output started in $hsFile:$hsLine");
+                }
+
                 header('Location: ' . $dest);
                 exit;
             } else {
