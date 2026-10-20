@@ -4,3 +4,5 @@ apps/lineups/import/
 db_credentials.php
 get_folder_id.php
 get_refresh_token.php
+/apps/lineups/apk/old
+apps/lineups/api/oldlineups_api.php
