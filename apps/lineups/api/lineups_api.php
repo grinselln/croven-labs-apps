@@ -7,6 +7,7 @@
 //                                                   and schedule=1 transactions
 //   GET  ?action=festivals_list                   – festival dropdown data (Android app)
 //   GET  ?action=setlist_data&festival_id=N       – full lineup for a festival (Android app)
+//   GET  ?action=app_version                      – newest app version (Android update check)
 //   POST action=set_schedule                      – toggle lineups_transactions.schedule
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -220,6 +221,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'setlist_data') {
             'stage_format'      => (object)$stageFormat,
             'schedule'          => $schedule,
             'transaction_count' => count($transactions),
+        ]);
+    } catch (PDOException $e) {
+        json_error('Database error: ' . $e->getMessage(), 500);
+    }
+    exit;
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// GET  action=app_version               (Android app update check)
+// Returns the newest row in lineups_app_versions (highest version_code).
+// ═════════════════════════════════════════════════════════════════════════════
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'app_version') {
+    header('Cache-Control: no-store');
+    try {
+        $row = $pdo->query(
+            "SELECT version_code, version_name, apk_url, notes
+               FROM lineups_app_versions
+              ORDER BY version_code DESC LIMIT 1"
+        )->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) json_error('No app version has been published yet.', 404);
+
+        echo json_encode([
+            'success'     => true,
+            'versionCode' => (int)$row['version_code'],
+            'versionName' => $row['version_name'] ?? '',
+            'apkUrl'      => $row['apk_url']      ?? '',
+            'notes'       => $row['notes']        ?? '',
         ]);
     } catch (PDOException $e) {
         json_error('Database error: ' . $e->getMessage(), 500);
