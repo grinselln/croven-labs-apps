@@ -5,6 +5,8 @@
 // Actions (all return JSON):
 //   GET  ?action=lockscreen_data&festival_id=N   – days, stageColors, dayAccents,
 //                                                   and schedule=1 transactions
+//   GET  ?action=festivals_list                   – festival dropdown data (Android app)
+//   GET  ?action=setlist_data&festival_id=N       – full lineup for a festival (Android app)
 //   POST action=set_schedule                      – toggle lineups_transactions.schedule
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -113,6 +115,112 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'lockscreen_data') {
             'schedule'      => $schedule,
         ]);
 
+    } catch (PDOException $e) {
+        json_error('Database error: ' . $e->getMessage(), 500);
+    }
+    exit;
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// GET  action=festivals_list            (Android app)
+// ═════════════════════════════════════════════════════════════════════════════
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'festivals_list') {
+    try {
+        $rows = $pdo->query("SELECT * FROM vw_lineups_festival_list")->fetchAll(PDO::FETCH_ASSOC);
+        $out = [];
+        foreach ($rows as $r) {
+            $out[] = [
+                'id'              => (int)$r['id'],
+                'event_Name'      => $r['event_Name']      ?? '',
+                'event_Year'      => $r['event_Year']      ?? null,
+                'event_StartDate' => $r['event_StartDate'] ?? null,
+                'event_EndDate'   => $r['event_EndDate']   ?? null,
+                'display_name'    => $r['display_name']    ?? '',
+            ];
+        }
+        echo json_encode(['success' => true, 'festivals' => $out]);
+    } catch (PDOException $e) {
+        json_error('Database error: ' . $e->getMessage(), 500);
+    }
+    exit;
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// GET  action=setlist_data&festival_id=N   (Android app)
+// Same payload as index.php?action=setlist_data, plus per-set `notes`.
+// Returns EVERY performer (not just schedule = 1).
+// ═════════════════════════════════════════════════════════════════════════════
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'setlist_data') {
+    $fid = isset($_GET['festival_id']) ? (int)$_GET['festival_id'] : 0;
+    if (!$fid) json_error('festival_id is required.');
+
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT valid_days, stage_format, festival_name
+               FROM vw_lineups_festival_config
+              WHERE festival_id = :fid LIMIT 1"
+        );
+        $stmt->execute([':fid' => $fid]);
+        $logic = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$logic) json_error("No festival config found for festival ID {$fid}.", 404);
+
+        $festivalName = $logic['festival_name'] ?? "Festival #{$fid}";
+        $days = array_map('ucfirst', json_decode($logic['valid_days'] ?? '[]', true) ?: []);
+        $rawStages = json_decode($logic['stage_format'] ?? '[]', true) ?: [];
+        uasort($rawStages, fn($a, $b) => (int)($a['order'] ?? 99) <=> (int)($b['order'] ?? 99));
+        $stageFormat = [];
+        foreach ($rawStages as $key => $meta) {
+            $stageFormat[ucfirst(strtolower($key))] = $meta;
+        }
+
+        $stmt2 = $pdo->prepare(
+            "SELECT * FROM vw_lineups_transactions_detail
+              WHERE festival_ID = :fid ORDER BY day_ord, start_minutes"
+        );
+        $stmt2->execute([':fid' => $fid]);
+        $transactions = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmt3 = $pdo->prepare(
+            "SELECT trans_ID, viewer, want, need FROM lineups_preferences WHERE festival_ID = :fid"
+        );
+        $stmt3->execute([':fid' => $fid]);
+        $prefsByTrans = [];
+        foreach ($stmt3->fetchAll(PDO::FETCH_ASSOC) as $pref) {
+            $type = $pref['need'] ? 'need' : ($pref['want'] ? 'want' : null);
+            if ($type) $prefsByTrans[(int)$pref['trans_ID']][$pref['viewer']] = $type;
+        }
+
+        $schedule = [];
+        foreach ($days as $day) {
+            $schedule[$day] = [];
+            foreach (array_keys($stageFormat) as $stage) $schedule[$day][$stage] = [];
+        }
+        foreach ($transactions as $tx) {
+            $txDay   = ucfirst(strtolower($tx['day']   ?? ''));
+            $txStage = ucfirst(strtolower($tx['stage'] ?? ''));
+            if (isset($schedule[$txDay][$txStage])) {
+                $schedule[$txDay][$txStage][] = [
+                    'id'         => (int)$tx['ID'],
+                    'performer'  => $tx['performer']  ?? '',
+                    'start_Time' => $tx['start_Time'] ?? '',
+                    'end_Time'   => $tx['end_Time']   ?? '',
+                    'schedule'   => (int)($tx['schedule'] ?? 0),
+                    'notes'      => $tx['notes']      ?? '',
+                    // (object) so an empty set encodes as {} not []
+                    'prefs'      => (object)($prefsByTrans[(int)$tx['ID']] ?? []),
+                ];
+            }
+        }
+
+        echo json_encode([
+            'success'           => true,
+            'festival_id'       => $fid,
+            'festival_name'     => $festivalName,
+            'days'              => $days,
+            'stage_format'      => (object)$stageFormat,
+            'schedule'          => $schedule,
+            'transaction_count' => count($transactions),
+        ]);
     } catch (PDOException $e) {
         json_error('Database error: ' . $e->getMessage(), 500);
     }
