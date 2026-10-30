@@ -135,6 +135,123 @@ if (isset($_GET['action']) && $_GET['action'] === 'setlist_data') {
     exit;
 }
 
+// ─── Handle lineup data (AJAX GET) ───────────────────────────────────
+// Alphabetical per-day lineup (one row per performer / day / stage) with
+// each attendee's want/need. Attendees come from lineups_import_logic.Attendees.
+if (isset($_GET['action']) && $_GET['action'] === 'lineup_data') {
+    header('Content-Type: application/json');
+    $fid = isset($_GET['festival_id']) ? (int)$_GET['festival_id'] : null;
+
+    if (!$fid) {
+        echo json_encode(['error' => 'No festival_id supplied.']);
+        exit;
+    }
+
+    try {
+        // 1. Days, stages, festival name
+        $stmt = $pdo->prepare(
+            "SELECT valid_days, stage_format, festival_name
+               FROM vw_lineups_festival_config
+              WHERE festival_id = :fid LIMIT 1"
+        );
+        $stmt->execute([':fid' => $fid]);
+        $logic = $stmt->fetch();
+
+        if (!$logic) {
+            echo json_encode(['error' => "No lineups_import_logic record found for festival ID {$fid}."]);
+            exit;
+        }
+
+        $festivalName = $logic['festival_name'] ?? "Festival #{$fid}";
+        $days = array_map('ucfirst', json_decode($logic['valid_days'], true) ?: []);
+
+        $rawStages = json_decode($logic['stage_format'], true) ?: [];
+        uasort($rawStages, fn($a, $b) => (int)($a['order'] ?? 99) <=> (int)($b['order'] ?? 99));
+        $stageFormat = [];
+        foreach ($rawStages as $key => $meta) {
+            $stageFormat[ucfirst(strtolower($key))] = $meta;
+        }
+        $stageOrder = array_flip(array_keys($stageFormat));
+
+        // 2. Attendees (viewer list) from lineups_import_logic
+        $stmtA = $pdo->prepare(
+            "SELECT Attendees FROM lineups_import_logic WHERE FESTIVAL_ID = :fid LIMIT 1"
+        );
+        $stmtA->execute([':fid' => $fid]);
+        $rawAttendees = json_decode($stmtA->fetchColumn() ?: '[]', true);
+        $attendees = [];          // display names, original order
+        $attendeeByLower = [];    // lowercase => display name
+        foreach ((is_array($rawAttendees) ? $rawAttendees : []) as $name) {
+            $name = trim((string)$name);
+            if ($name === '' || isset($attendeeByLower[strtolower($name)])) continue;
+            $attendeeByLower[strtolower($name)] = $name;
+            $attendees[] = $name;
+        }
+
+        // 3. Transactions
+        $stmt2 = $pdo->prepare(
+            "SELECT * FROM vw_lineups_transactions_detail WHERE festival_ID = :fid"
+        );
+        $stmt2->execute([':fid' => $fid]);
+        $transactions = $stmt2->fetchAll();
+
+        // 4. Preferences (only for listed attendees)
+        $stmt3 = $pdo->prepare(
+            "SELECT trans_ID, viewer, want, need FROM lineups_preferences WHERE festival_ID = :fid"
+        );
+        $stmt3->execute([':fid' => $fid]);
+        $prefsByTrans = [];
+        foreach ($stmt3->fetchAll() as $pref) {
+            $type = $pref['need'] ? 'need' : ($pref['want'] ? 'want' : null);
+            $name = $attendeeByLower[strtolower(trim((string)$pref['viewer']))] ?? null;
+            if ($type && $name !== null) {
+                $prefsByTrans[(int)$pref['trans_ID']][$name] = $type;
+            }
+        }
+
+        // 5. Build per-day lists
+        $lineup = [];
+        foreach ($days as $day) $lineup[$day] = [];
+
+        foreach ($transactions as $tx) {
+            $txDay   = ucfirst(strtolower($tx['day']   ?? ''));
+            $txStage = ucfirst(strtolower($tx['stage'] ?? ''));
+            if (!isset($lineup[$txDay])) continue;
+            $lineup[$txDay][] = [
+                'id'        => (int)$tx['ID'],
+                'performer' => $tx['performer'] ?? '',
+                'stage'     => $txStage,
+                'prefs'     => (object)($prefsByTrans[(int)$tx['ID']] ?? []),
+            ];
+        }
+
+        // Alphabetical on the literal performer text (case-insensitive),
+        // then stage order, then ID for a stable result.
+        foreach ($lineup as $day => &$rows) {
+            usort($rows, function ($a, $b) use ($stageOrder) {
+                $c = strcasecmp($a['performer'], $b['performer']);
+                if ($c !== 0) return $c;
+                $c = ($stageOrder[$a['stage']] ?? 99) <=> ($stageOrder[$b['stage']] ?? 99);
+                return $c !== 0 ? $c : $a['id'] <=> $b['id'];
+            });
+        }
+        unset($rows);
+
+        echo json_encode([
+            'festival_id'       => $fid,
+            'festival_name'     => $festivalName,
+            'days'              => $days,
+            'stage_format'      => (object)$stageFormat,
+            'viewers'           => $attendees,
+            'lineup'            => $lineup,
+            'transaction_count' => count($transactions),
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode(['error' => 'Database error: ' . htmlspecialchars($e->getMessage())]);
+    }
+    exit;
+}
+
 // ─── Load festival list ───────────────────────────────────────────────
 $festivals = [];
 try {
@@ -192,6 +309,7 @@ $pageTitle          = 'Lineups';
     <button class="tab-btn active"   role="tab" data-tab="list"    aria-selected="true">Festival List</button>
     <button class="tab-btn tab-gated" role="tab" data-tab="imports" aria-selected="false" disabled title="Select a festival first">Import</button>
     <button class="tab-btn tab-gated" role="tab" data-tab="imports2" aria-selected="false" disabled title="Select a festival first">Import2</button>
+    <button class="tab-btn tab-gated" role="tab" data-tab="lineup" aria-selected="false" disabled title="Select a festival first">Lineup</button>
     <button class="tab-btn tab-gated" role="tab" data-tab="setlist" aria-selected="false" disabled title="Select a festival first">Set List</button>
     <button class="tab-btn" role="tab" data-tab="lockscreen" aria-selected="false">Lockscreen</button>
   </div>
@@ -251,6 +369,11 @@ $pageTitle          = 'Lineups';
     <!-- ── Tab 2.5: Imports ── -->
   <div class="tab-panel" id="panel-imports2" role="tabpanel">
     <?php include 'lineup_imports.php'; ?>
+  </div>
+
+  <!-- ── Tab 2.9: Lineup ── -->
+  <div class="tab-panel" id="panel-lineup" role="tabpanel">
+    <?php include 'LineupViewer.php'; ?>
   </div>
 
   <!-- ── Tab 3: Set List ── -->
