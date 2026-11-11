@@ -1,5 +1,5 @@
 ---
-name: Bug Report
+name: Bug Report Events
 about: Report a bug or unexpected behavior on a specific site component
 title: '[BUG] '
 labels: bug, Events
