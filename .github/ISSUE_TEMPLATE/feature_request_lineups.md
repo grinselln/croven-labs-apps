@@ -2,17 +2,11 @@
 name: Feature Request
 about: Suggest an idea or enhancement for a specific site component
 title: '[FEATURE] '
-labels: enhancement
+labels: enhancement, Lineups
 type: feature
 assignees: ''
 
 ---
-
-### Site
-*Select the relevant site component from the options below (delete the ones that don't apply):*
-- [ ] Lineups
-- [ ] Events
-- [ ] Countdowns
 
 ### Target URL
 <!-- Provide the full URL where this feature or issue is located -->
