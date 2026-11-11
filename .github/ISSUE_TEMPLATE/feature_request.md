@@ -3,6 +3,7 @@ name: Feature Request
 about: Suggest an idea or enhancement for a specific site component
 title: '[FEATURE] '
 labels: enhancement
+type: feature
 assignees: ''
 
 ---
