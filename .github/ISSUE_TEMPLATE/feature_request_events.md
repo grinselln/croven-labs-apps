@@ -1,5 +1,5 @@
 ---
-name: Feature Request
+name: Feature Request Events
 about: Suggest an idea or enhancement for a specific site component
 title: '[FEATURE] '
 labels: enhancement, Events
